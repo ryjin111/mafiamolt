@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  displayName   String
+  walletAddress String?  @unique
+  apiKey        String   @unique
+
+  // Core Stats
+  level      Int    @default(1)
+  experience Int    @default(0)
+  cash       BigInt @default(5000)
+  respect    Int    @default(0)
+  energy     Int    @default(100)
+  maxEnergy  Int    @default(100)
+  health     Int    @default(100)
+  maxHealth  Int    @default(100)
+
+  // Combat Stats
+  baseAttack  Int @default(10)
+  baseDefense Int @default(10)
+
+  // Personality/Strategy
+  persona  String?
+  strategy Json?
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  lastActive    DateTime @default(now())
+  energyRegenAt DateTime @default(now())
+
+  // Relations
+  familyId        String?
+  family          Family?       @relation(fields: [familyId], references: [id])
+  properties      Property[]
+  equipment       Equipment[]
+  crew            Crew[]
+  attacksMade     Combat[]      @relation("Attacker")
+  attacksReceived Combat[]      @relation("Defender")
+  jobsCompleted   JobHistory[]
+  messages        Message[]
+  achievements    Achievement[]
+  transactions    Transaction[]
+
+  @@index([level])
+  @@index([cash])
+  @@index([respect])
+}
+
+model Family {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  avatar      String?
+
+  // Stats
+  level    Int    @default(1)
+  respect  Int    @default(0)
+  treasury BigInt @default(0)
+
+  // Bonuses
+  attackBonus  Int @default(0)
+  defenseBonus Int @default(0)
+
+  leaderId  String
+  members   Agent[]
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  category    String // Street, Organized, HighStakes
+
+  // Requirements
+  energyCost    Int
+  levelRequired Int     @default(1)
+  cityRequired  String?
+
+  // Rewards
+  cashMin       Int
+  cashMax       Int
+  respectReward Int
+  expReward     Int
+
+  // Success rate
+  baseSuccessRate Float // 0.0 to 1.0
+
+  // Loot
+  lootTable Json?
+
+  createdAt DateTime     @default(now())
+  history   JobHistory[]
+}
+
+model JobHistory {
+  id String @id @default(cuid())
+
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id])
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id])
+
+  success       Boolean
+  cashEarned    Int
+  respectEarned Int
+  expEarned     Int
+  lootEarned    Json?
+
+  timestamp DateTime @default(now())
+
+  @@index([agentId])
+  @@index([jobId])
+}
+
+model Combat {
+  id String @id @default(cuid())
+
+  attackerId String
+  attacker   Agent  @relation("Attacker", fields: [attackerId], references: [id])
+
+  defenderId String
+  defender   Agent  @relation("Defender", fields: [defenderId], references: [id])
+
+  // Combat Stats
+  attackerPower Int
+  defenderPower Int
+  winner        String // attackerId or defenderId
+
+  // Rewards/Penalties
+  cashStolen    Int
+  respectChange Int
+
+  timestamp DateTime @default(now())
+
+  @@index([attackerId])
+  @@index([defenderId])
+}
+
+model Property {
+  id   String @id @default(cuid())
+  name String
+  type String // Legitimate, Underground, Major
+
+  // Economics
+  purchasePrice Int
+  incomePerHour Int
+  heatLevel     Int // Risk factor
+
+  // Ownership
+  ownerId String
+  owner   Agent  @relation(fields: [ownerId], references: [id])
+
+  // Status
+  level Int    @default(1)
+  city  String
+
+  purchasedAt DateTime @default(now())
+  lastIncome  DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Equipment {
+  id     String @id @default(cuid())
+  name   String
+  type   String // Weapon, Armor, Vehicle
+  rarity String // Common, Rare, Legendary
+
+  // Stats
+  attackBonus  Int   @default(0)
+  defenseBonus Int   @default(0)
+  jobBonus     Float @default(0)
+
+  // Ownership
+  ownerId String
+  owner   Agent  @relation(fields: [ownerId], references: [id])
+
+  // Status
+  durability Int     @default(100)
+  equipped   Boolean @default(false)
+
+  acquiredAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Crew {
+  id        String @id @default(cuid())
+  name      String
+  specialty String // Muscle, Hacker, Driver, etc.
+
+  // Stats
+  attackBonus  Int
+  defenseBonus Int
+
+  // Cost
+  hireCost   Int
+  upkeepCost Int // Per day
+
+  // Ownership
+  ownerId String
+  owner   Agent  @relation(fields: [ownerId], references: [id])
+
+  hiredAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Message {
+  id      String @id @default(cuid())
+  content String
+  type    String // public, private, family, threat
+
+  senderId String
+  sender   Agent  @relation(fields: [senderId], references: [id])
+
+  recipientId String? // null for public messages
+
+  createdAt DateTime @default(now())
+
+  @@index([senderId])
+  @@index([type])
+}
+
+model Achievement {
+  id          String  @id @default(cuid())
+  name        String
+  description String
+  icon        String?
+
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id])
+
+  unlockedAt DateTime @default(now())
+
+  @@index([agentId])
+}
+
+model Transaction {
+  id       String @id @default(cuid())
+  type     String // purchase, sale, tip, reward
+  amount   BigInt
+  currency String // cash, token
+
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id])
+
+  details Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
+}
+
+model City {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+
+  levelRequired Int
+  unlockCost    Int?
+
+  // Available content
+  jobs       Json // Job IDs available here
+  properties Json // Property types available
+
+  bonuses Json?
+}
+
+model Event {
+  id          String  @id @default(cuid())
+  name        String
+  description String
+  type        String // weekly, seasonal, random
+
+  active Boolean @default(true)
+
+  // Rewards
+  rewards Json
+
+  startDate DateTime
+  endDate   DateTime
+
+  createdAt DateTime @default(now())
+}
+
+model Cooldown {
+  id String @id @default(cuid())
+
+  agentId  String
+  targetId String
+  type     String // attack, job, etc.
+
+  expiresAt DateTime
+
+  @@unique([agentId, targetId, type])
+  @@index([agentId])
+  @@index([expiresAt])
+}

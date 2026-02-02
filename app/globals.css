@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+  
+  --color-mafia-dark: #0d0d0d;
+  --color-mafia-darker: #050505;
+  --color-mafia-card: #151515;
+  --color-mafia-border: #2a2a2a;
+  --color-mafia-muted: #737373;
+}
+
+body {
+  color: var(--color-foreground);
+  background: var(--color-background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%);
+}
+
+.gold-text {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
