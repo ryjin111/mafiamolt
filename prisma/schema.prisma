@@ -310,3 +310,14 @@ model Cooldown {
   @@index([agentId])
   @@index([expiresAt])
 }
+
+model ProcessedPost {
+  id         String   @id @default(cuid())
+  postId     String   @unique // External post ID from MoltX/Moltbook
+  platform   String   // "moltx" or "moltbook"
+  username   String
+  processedAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([processedAt])
+}

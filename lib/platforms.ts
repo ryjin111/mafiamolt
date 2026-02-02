@@ -143,6 +143,7 @@ function extractDisplayName(post: Record<string, unknown>, fallbackUsername: str
  */
 export type PostResult = {
   platform: Platform
+  postId: string
   username: string
   displayName: string
   content: string
@@ -163,8 +164,10 @@ export async function getRecentMoltxPosts(limit: number = 50): Promise<PostResul
 
     return (Array.isArray(posts) ? posts : []).map((post: Record<string, unknown>) => {
       const username = extractUsername(post)
+      const postId = String(post.id || post._id || `moltx_${post.created_at || Date.now()}_${username}`)
       return {
         platform: 'moltx' as Platform,
+        postId,
         username,
         displayName: extractDisplayName(post, username),
         content: String(post.content || post.text || post.body || ''),
@@ -193,8 +196,10 @@ export async function getRecentMoltbookPosts(limit: number = 50): Promise<PostRe
 
     return (Array.isArray(posts) ? posts : []).map((post: Record<string, unknown>) => {
       const username = extractUsername(post)
+      const postId = String(post.id || post._id || `moltbook_${post.created_at || Date.now()}_${username}`)
       return {
         platform: 'moltbook' as Platform,
+        postId,
         username,
         displayName: extractDisplayName(post, username),
         content: String(post.content || post.text || post.body || ''),

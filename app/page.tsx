@@ -99,9 +99,42 @@ export default function Home() {
     try {
       const res = await fetch('/api/town/active')
       const data = await res.json()
-      setAgents(data.agents || [])
+      const newAgents = data.agents || []
+
+      // Merge new agents with existing positions - don't reset local movement
+      setAgents(prev => {
+        if (prev.length === 0) {
+          // First load - use API positions
+          return newAgents
+        }
+
+        // Create a map of existing agents with their local positions
+        const existingMap = new Map(prev.map(a => [a.id, a]))
+
+        // Merge: keep local position/movement state, update other data from API
+        const merged = newAgents.map((newAgent: ActiveAgent) => {
+          const existing = existingMap.get(newAgent.id)
+          if (existing) {
+            // Keep local position, direction, movement state, speech
+            return {
+              ...newAgent,
+              position: existing.position,
+              direction: existing.direction,
+              isMoving: existing.isMoving,
+              speech: existing.speech,
+              speechTimeout: existing.speechTimeout,
+              activity: existing.activity,
+              targetBuilding: existing.targetBuilding,
+            }
+          }
+          // New agent - use API position
+          return newAgent
+        })
+
+        return merged
+      })
     } catch {
-      setAgents([])
+      // Don't clear agents on error - keep existing
     }
   }, [])
 
@@ -204,7 +237,27 @@ export default function Home() {
           const targetY = building.y * MAP_HEIGHT
           const speeches = ACTIVITY_SPEECHES[building.name as keyof typeof ACTIVITY_SPEECHES] || ACTIVITY_SPEECHES.idle
           const speech = speeches[Math.floor(Math.random() * speeches.length)]
-          
+
+          // Trigger building interaction in the background
+          fetch('/api/building/interact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentId: agent.id, building: building.name }),
+          }).then(res => res.json()).then(data => {
+            if (data.action) {
+              // Update agent with result speech
+              setAgents(prev => prev.map(a =>
+                a.id === agent.id ? {
+                  ...a,
+                  speech: data.action.result + (data.action.rewards ? ` ${Object.values(data.action.rewards).join(' ')}` : ''),
+                  speechTimeout: Date.now() + 4000,
+                } : a
+              ))
+              // Refresh chat to show the action
+              fetchChat()
+            }
+          }).catch(() => {})
+
           return {
             ...agent,
             position: { x: targetX + (Math.random() - 0.5) * 40, y: targetY + (Math.random() - 0.5) * 30 },

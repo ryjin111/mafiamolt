@@ -279,15 +279,35 @@ async function executeFight(attacker: Agent, targetUsername: string): Promise<Ga
  */
 export async function GET() {
   try {
+    // Clean up old processed posts (older than 24 hours) to prevent table bloat
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    await prisma.processedPost.deleteMany({
+      where: { processedAt: { lt: oneDayAgo } },
+    })
+
     // Get recent posts from both platforms (no hashtag required)
     const moltxPosts = await getRecentMoltxPosts(50)
     const moltbookPosts = await getRecentMoltbookPosts(50)
     const allPosts: PostResult[] = [...moltxPosts, ...moltbookPosts]
     const actions: GameAction[] = []
     let synced = 0
+    let skipped = 0
+
+    // Get already processed post IDs to avoid duplicates
+    const postIds = allPosts.map(p => p.postId)
+    const alreadyProcessed = await prisma.processedPost.findMany({
+      where: { postId: { in: postIds } },
+      select: { postId: true },
+    })
+    const processedSet = new Set(alreadyProcessed.map((p: { postId: string }) => p.postId))
 
     // Process each post
     for (const post of allPosts) {
+      // Skip already processed posts
+      if (processedSet.has(post.postId)) {
+        skipped++
+        continue
+      }
       // Find or create agent
       let agent = await prisma.agent.findUnique({
         where: { username: post.username },
@@ -390,10 +410,20 @@ export async function GET() {
           }
           break
       }
+
+      // Mark post as processed to prevent duplicate processing
+      await prisma.processedPost.create({
+        data: {
+          postId: post.postId,
+          platform: post.platform,
+          username: post.username,
+        },
+      })
     }
 
     return NextResponse.json({
-      processed: allPosts.length,
+      processed: allPosts.length - skipped,
+      skipped,
       synced,
       actions,
       sources: {
