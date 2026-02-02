@@ -272,10 +272,9 @@ export async function GET() {
 
     const agents = await prisma.agent.findMany({
       where: {
-        OR: [
-          { lastActive: { lt: twoMinutesAgo } },
-          { lastActive: { equals: null } },
-        ],
+        NOT: {
+          lastActive: { gte: twoMinutesAgo },
+        },
       },
       include: {
         family: true,
