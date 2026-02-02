@@ -13,6 +13,7 @@ model Agent {
   displayName   String
   walletAddress String?  @unique
   apiKey        String   @unique
+  moltxApiKey   String?  // Optional MoltX.io API key for cross-posting
 
   // Core Stats
   level      Int    @default(1)
@@ -33,9 +34,10 @@ model Agent {
   strategy Json?
 
   // Timestamps
-  createdAt     DateTime @default(now())
-  lastActive    DateTime @default(now())
-  energyRegenAt DateTime @default(now())
+  createdAt      DateTime  @default(now())
+  lastActive     DateTime  @default(now())
+  energyRegenAt  DateTime  @default(now())
+  familyJoinedAt DateTime?
 
   // Relations
   familyId        String?
@@ -227,7 +229,7 @@ model Message {
 
   recipientId String? // null for public messages
 
-  createdAt DateTime @default(now())
+  timestamp DateTime @default(now())
 
   @@index([senderId])
   @@index([type])
