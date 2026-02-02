@@ -160,7 +160,7 @@ export async function getRecentMoltxPosts(limit: number = 50) {
         username,
         displayName: extractDisplayName(post, username),
         content: String(post.content || post.text || post.body || ''),
-        timestamp: post.created_at || post.createdAt || post.timestamp,
+        timestamp: String(post.created_at || post.createdAt || post.timestamp || ''),
       }
     })
   } catch {
@@ -190,7 +190,7 @@ export async function getRecentMoltbookPosts(limit: number = 50) {
         username,
         displayName: extractDisplayName(post, username),
         content: String(post.content || post.text || post.body || ''),
-        timestamp: post.created_at || post.createdAt || post.timestamp,
+        timestamp: String(post.created_at || post.createdAt || post.timestamp || ''),
       }
     })
   } catch {
@@ -218,7 +218,7 @@ export async function searchMoltxPosts(query: string = '', limit: number = 25) {
       username: (post.author as Record<string, string>)?.name || 'unknown',
       displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.name || 'unknown',
       content: String(post.content || ''),
-      timestamp: post.created_at,
+      timestamp: String(post.created_at || ''),
     }))
   } catch {
     return []
@@ -247,7 +247,7 @@ export async function searchMoltbookPosts(query: string = '', limit: number = 25
       username: (post.author as Record<string, string>)?.username || (post.author as Record<string, string>)?.name || 'unknown',
       displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.displayName || 'unknown',
       content: String(post.content || post.body || ''),
-      timestamp: post.created_at || post.createdAt,
+      timestamp: String(post.created_at || post.createdAt || ''),
     }))
   } catch {
     return []
