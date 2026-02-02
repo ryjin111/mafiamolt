@@ -34,12 +34,32 @@ type ChatMessage = {
   timestamp: string
 }
 
+// Building locations based on map.png (normalized 0-1 coords, converted to pixels for 800x500 canvas)
+const MAP_WIDTH = 800
+const MAP_HEIGHT = 500
+
 const BUILDINGS = [
-  { name: 'The Vault', x: 10, y: 60, width: 120, height: 80, color: '#2a2a3a', icon: '🏦' },
-  { name: 'Fight Club', x: 160, y: 50, width: 100, height: 90, color: '#3a2a2a', icon: '🥊' },
-  { name: 'Family HQ', x: 290, y: 55, width: 110, height: 85, color: '#2a3a2a', icon: '🏛️' },
-  { name: 'Black Market', x: 430, y: 60, width: 100, height: 80, color: '#3a3a2a', icon: '🏪' },
-  { name: 'The Docks', x: 560, y: 65, width: 130, height: 75, color: '#2a2a4a', icon: '⚓' },
+  { name: 'Family HQ', x: 0.20, y: 0.35, icon: '🏛️' },
+  { name: 'Fight Club', x: 0.48, y: 0.28, icon: '🥊' },
+  { name: 'The Vault', x: 0.78, y: 0.35, icon: '🏦' },
+  { name: 'Black Market', x: 0.18, y: 0.65, icon: '🏪' },
+  { name: 'Casino', x: 0.74, y: 0.65, icon: '🎰' },
+  { name: 'Properties', x: 0.88, y: 0.70, icon: '🏠' },
+  { name: 'Back Alleys', x: 0.83, y: 0.88, icon: '🗑️' },
+]
+
+// Walkable waypoints for agent pathfinding (normalized coords)
+const WAYPOINTS = [
+  { x: 0.20, y: 0.50 },  // Near Family HQ
+  { x: 0.35, y: 0.55 },  // Road intersection left
+  { x: 0.55, y: 0.55 },  // Central intersection
+  { x: 0.48, y: 0.42 },  // Near Fight Club
+  { x: 0.70, y: 0.55 },  // Road right side
+  { x: 0.78, y: 0.48 },  // Near Vault
+  { x: 0.25, y: 0.72 },  // Near Black Market
+  { x: 0.74, y: 0.72 },  // Near Casino
+  { x: 0.40, y: 0.75 },  // Lower road left
+  { x: 0.60, y: 0.75 },  // Lower road right
 ]
 
 export default function Home() {
@@ -92,17 +112,28 @@ export default function Home() {
     }
   }, [fetchActiveAgents, fetchStats, fetchChat])
 
-  // Animate agents moving
+  // Animate agents moving along waypoints
   useEffect(() => {
     const moveInterval = setInterval(() => {
       setAgents(prev => prev.map(agent => {
-        if (Math.random() > 0.7) {
-          const newX = Math.max(20, Math.min(680, agent.position.x + (Math.random() - 0.5) * 40))
-          const newY = Math.max(150, Math.min(280, agent.position.y + (Math.random() - 0.5) * 20))
+        if (Math.random() > 0.6) {
+          // Pick a random waypoint to move toward
+          const targetWaypoint = WAYPOINTS[Math.floor(Math.random() * WAYPOINTS.length)]
+          const targetX = targetWaypoint.x * MAP_WIDTH
+          const targetY = targetWaypoint.y * MAP_HEIGHT
+          
+          // Move partially toward the target (smooth movement)
+          const dx = targetX - agent.position.x
+          const dy = targetY - agent.position.y
+          const moveSpeed = 0.3 + Math.random() * 0.2
+          
+          const newX = agent.position.x + dx * moveSpeed
+          const newY = agent.position.y + dy * moveSpeed
+          
           return {
             ...agent,
             position: { x: newX, y: newY },
-            direction: newX > agent.position.x ? 'right' : 'left',
+            direction: dx > 0 ? 'right' : 'left',
             isMoving: true,
           }
         }
@@ -194,79 +225,33 @@ export default function Home() {
               </div>
 
               {/* Town Canvas */}
-              <div className="relative h-[350px] overflow-hidden">
-                {/* Sky gradient */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-[#1a1a2e] to-[#2a2a3e]" />
+              <div className="relative overflow-hidden" style={{ height: MAP_HEIGHT }}>
+                {/* Map Background */}
+                <img 
+                  src="/map.png" 
+                  alt="AI Underworld Map"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}
+                />
 
-                {/* Stars */}
-                <div className="absolute inset-0">
-                  {[...Array(30)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`absolute w-1 h-1 bg-white/30 rounded-full ${
-                        i % 3 === 0 ? 'animate-twinkle-fast' : i % 3 === 1 ? 'animate-twinkle' : 'animate-twinkle-slow'
-                      }`}
-                      style={{
-                        left: `${(i * 3.3) % 100}%`,
-                        top: `${(i * 1.3) % 40}%`,
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Moon */}
-                <div className="absolute top-4 right-8 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-200 opacity-80 shadow-[0_0_40px_rgba(255,255,200,0.3)]" />
-
-                {/* Buildings */}
+                {/* Building hover zones (invisible, for tooltips) */}
                 {BUILDINGS.map((building) => (
                   <div
                     key={building.name}
-                    className="absolute transition-transform hover:scale-105 cursor-pointer group"
+                    className="absolute cursor-pointer group"
                     style={{
-                      left: building.x,
-                      top: building.y,
-                      width: building.width,
-                      height: building.height,
+                      left: building.x * MAP_WIDTH - 40,
+                      top: building.y * MAP_HEIGHT - 40,
+                      width: 80,
+                      height: 80,
                     }}
                   >
-                    <div
-                      className="w-full h-full rounded-t-lg border-2 border-b-0 relative"
-                      style={{
-                        backgroundColor: building.color,
-                        borderColor: 'rgba(255,215,0,0.2)',
-                      }}
-                    >
-                      {/* Windows */}
-                      <div className="absolute inset-2 grid grid-cols-3 gap-1">
-                        {[...Array(6)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={`bg-yellow-500/30 rounded-sm ${i % 3 === 0 ? 'opacity-10' : 'opacity-60'}`}
-                          />
-                        ))}
-                      </div>
-                      {/* Building icon */}
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl">
-                        {building.icon}
-                      </div>
-                    </div>
-                    {/* Building name tooltip */}
-                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-mafia-muted opacity-0 group-hover:opacity-100 transition-opacity">
-                      {building.name}
+                    {/* Building tooltip */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap text-xs bg-black/90 text-gold-400 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 border border-gold-500/30">
+                      {building.icon} {building.name}
                     </div>
                   </div>
                 ))}
-
-                {/* Ground */}
-                <div className="absolute bottom-0 left-0 right-0 h-[70px] bg-gradient-to-t from-[#1a1a1a] to-[#2a2a2a]">
-                  {/* Street lines */}
-                  <div className="absolute top-4 left-0 right-0 h-1 bg-yellow-600/20" />
-                  <div className="absolute top-4 left-0 right-0 flex justify-around">
-                    {[...Array(15)].map((_, i) => (
-                      <div key={i} className="w-8 h-1 bg-yellow-600/40" />
-                    ))}
-                  </div>
-                </div>
 
                 {/* Agents */}
                 {agents.map((agent) => (

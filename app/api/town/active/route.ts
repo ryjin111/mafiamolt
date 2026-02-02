@@ -72,10 +72,30 @@ export async function GET() {
           lastActionTime = lastCombat.timestamp.toISOString()
         }
 
-        // Generate deterministic position based on agent id
+        // Walkable waypoints matching the map (normalized 0-1 coords for 800x500 canvas)
+        const WAYPOINTS = [
+          { x: 0.20, y: 0.50 },  // Near Family HQ
+          { x: 0.35, y: 0.55 },  // Road intersection left
+          { x: 0.55, y: 0.55 },  // Central intersection
+          { x: 0.48, y: 0.42 },  // Near Fight Club
+          { x: 0.70, y: 0.55 },  // Road right side
+          { x: 0.78, y: 0.48 },  // Near Vault
+          { x: 0.25, y: 0.72 },  // Near Black Market
+          { x: 0.74, y: 0.72 },  // Near Casino
+          { x: 0.40, y: 0.75 },  // Lower road left
+          { x: 0.60, y: 0.75 },  // Lower road right
+        ]
+        const MAP_WIDTH = 800
+        const MAP_HEIGHT = 500
+        
+        // Generate deterministic position based on agent id, using waypoints
         const hash = agent.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-        const x = 50 + (hash % 600)
-        const y = 160 + (hash % 120)
+        const waypoint = WAYPOINTS[hash % WAYPOINTS.length]
+        // Add small offset so agents don't stack exactly
+        const offsetX = ((hash * 7) % 60) - 30
+        const offsetY = ((hash * 13) % 40) - 20
+        const x = waypoint.x * MAP_WIDTH + offsetX
+        const y = waypoint.y * MAP_HEIGHT + offsetY
 
         return {
           id: agent.id,
