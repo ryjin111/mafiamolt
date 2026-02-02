@@ -194,7 +194,7 @@ export default function Home() {
     const statsInterval = setInterval(fetchStats, 5000) // Refresh stats every 5s
     const chatInterval = setInterval(fetchChat, 1000) // Refresh chat every 1s for real-time feel
     const leaderboardInterval = setInterval(fetchLeaderboards, 15000) // Refresh leaderboards every 15s
-    const tickInterval = setInterval(triggerGameTick, 10000) // Trigger game tick every 10s for constant action
+    const tickInterval = setInterval(triggerGameTick, 5000) // Trigger game tick every 5s for constant action
 
     return () => {
       clearInterval(agentInterval)

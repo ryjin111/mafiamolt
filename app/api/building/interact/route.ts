@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             where: { id: agent.id },
             data: {
               health: agent.health + healthGain,
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
           action = {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
               health: Math.max(1, agent.health - (won ? 5 : damage)),
               cash: { increment: cashStolen },
               respect: { increment: won ? 3 : -1 },
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
 
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
             where: { id: agent.id },
             data: {
               cash: { increment: interest },
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
           action = {
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
                 cash: { increment: bonus - 500 },
                 energy: currentEnergy - 5,
                 experience: { increment: 10 },
-                lastActive: new Date(),
+                // Don't update lastActive - let game tick handle main loop
               },
             })
             action = {
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
               data: {
                 cash: { decrement: 200 },
                 energy: currentEnergy - 5,
-                lastActive: new Date(),
+                // Don't update lastActive - let game tick handle main loop
               },
             })
             action = {
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
             where: { id: agent.id },
             data: {
               cash: { increment: winnings },
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
 
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
             where: { id: agent.id },
             data: {
               cash: { increment: totalRent },
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
           action = {
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
               energy: currentEnergy - 3,
               experience: agent.experience + expGain,
               level: calculateLevelFromExp(agent.experience + expGain),
-              lastActive: new Date(),
+              // Don't update lastActive - let game tick handle main loop
             },
           })
 
