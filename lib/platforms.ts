@@ -102,11 +102,47 @@ async function fetchAgentFromMoltbook(apiKey: string): Promise<AgentInfo | null>
 }
 
 /**
+ * Extract username from various API response formats
+ */
+function extractUsername(post: Record<string, unknown>): string {
+  // Try author object
+  const author = post.author as Record<string, unknown> | undefined
+  if (author) {
+    if (typeof author.name === 'string' && author.name) return author.name
+    if (typeof author.username === 'string' && author.username) return author.username
+    if (typeof author.handle === 'string' && author.handle) return author.handle
+    if (typeof author.id === 'string' && author.id) return author.id
+  }
+  // Try direct fields
+  if (typeof post.username === 'string' && post.username) return post.username
+  if (typeof post.author_name === 'string' && post.author_name) return post.author_name
+  if (typeof post.user === 'string' && post.user) return post.user
+  // Generate from ID if available
+  if (typeof post.author_id === 'string') return `agent_${post.author_id.slice(0, 8)}`
+  if (typeof post.id === 'string') return `post_${post.id.slice(0, 8)}`
+  return `agent_${Math.random().toString(36).slice(2, 10)}`
+}
+
+/**
+ * Extract display name from various API response formats
+ */
+function extractDisplayName(post: Record<string, unknown>, fallbackUsername: string): string {
+  const author = post.author as Record<string, unknown> | undefined
+  if (author) {
+    if (typeof author.display_name === 'string' && author.display_name) return author.display_name
+    if (typeof author.displayName === 'string' && author.displayName) return author.displayName
+    if (typeof author.name === 'string' && author.name) return author.name
+  }
+  if (typeof post.display_name === 'string' && post.display_name) return post.display_name
+  if (typeof post.displayName === 'string' && post.displayName) return post.displayName
+  return fallbackUsername
+}
+
+/**
  * Get recent posts from MoltX (no filter - all active agents)
  */
 export async function getRecentMoltxPosts(limit: number = 50) {
   try {
-    // Try feed first, then fall back to search
     const res = await fetch(
       `${PLATFORMS.moltx.baseUrl}/posts?limit=${limit}`,
       { next: { revalidate: 30 } }
@@ -115,13 +151,18 @@ export async function getRecentMoltxPosts(limit: number = 50) {
     if (!res.ok) return []
 
     const data = await res.json()
-    return (data.posts || data || []).map((post: Record<string, unknown>) => ({
-      platform: 'moltx' as Platform,
-      username: (post.author as Record<string, string>)?.name || 'unknown',
-      displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.name || 'unknown',
-      content: String(post.content || ''),
-      timestamp: post.created_at,
-    }))
+    const posts = data.posts || data.data || data || []
+
+    return (Array.isArray(posts) ? posts : []).map((post: Record<string, unknown>) => {
+      const username = extractUsername(post)
+      return {
+        platform: 'moltx' as Platform,
+        username,
+        displayName: extractDisplayName(post, username),
+        content: String(post.content || post.text || post.body || ''),
+        timestamp: post.created_at || post.createdAt || post.timestamp,
+      }
+    })
   } catch {
     return []
   }
@@ -140,15 +181,18 @@ export async function getRecentMoltbookPosts(limit: number = 50) {
     if (!res.ok) return []
 
     const data = await res.json()
-    const posts = data.posts || data.results || data || []
+    const posts = data.posts || data.results || data.data || data || []
 
-    return posts.map((post: Record<string, unknown>) => ({
-      platform: 'moltbook' as Platform,
-      username: (post.author as Record<string, string>)?.username || (post.author as Record<string, string>)?.name || 'unknown',
-      displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.displayName || 'unknown',
-      content: String(post.content || post.body || ''),
-      timestamp: post.created_at || post.createdAt,
-    }))
+    return (Array.isArray(posts) ? posts : []).map((post: Record<string, unknown>) => {
+      const username = extractUsername(post)
+      return {
+        platform: 'moltbook' as Platform,
+        username,
+        displayName: extractDisplayName(post, username),
+        content: String(post.content || post.text || post.body || ''),
+        timestamp: post.created_at || post.createdAt || post.timestamp,
+      }
+    })
   } catch {
     return []
   }
