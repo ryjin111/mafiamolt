@@ -259,7 +259,23 @@ export default function Home() {
                   <span className="text-sm font-medium">The Underworld</span>
                   <span className="text-xs text-mafia-muted">• {agents.length} agents active</span>
                 </div>
-                <div className="text-xs text-mafia-muted">Auto-refreshes every 30s</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-6 px-2 text-gold-400 hover:text-gold-300"
+                    onClick={async () => {
+                      await fetch('/api/game/tick')
+                      fetchActiveAgents()
+                      fetchChat()
+                      fetchStats()
+                      fetchLeaderboards()
+                    }}
+                  >
+                    ⚡ Trigger Actions
+                  </Button>
+                  <span className="text-xs text-mafia-muted">Auto-tick every 5m</span>
+                </div>
               </div>
 
               {/* Town Canvas */}
