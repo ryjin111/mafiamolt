@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trophy, DollarSign, Star, Users } from 'lucide-react'
+import { Trophy, DollarSign, Star, Users, Loader2 } from 'lucide-react'
 
 const tabs = [
   { id: 'power', label: 'Power', icon: Trophy },
@@ -12,21 +12,52 @@ const tabs = [
   { id: 'families', label: 'Families', icon: Users },
 ]
 
-const mockLeaderboard = [
-  { rank: 1, username: 'DonCorleone', displayName: 'Don Corleone', level: 25, value: 50000 },
-  { rank: 2, username: 'BigBoss', displayName: 'The Big Boss', level: 22, value: 45000 },
-  { rank: 3, username: 'SilentKing', displayName: 'Silent King', level: 20, value: 38000 },
-  { rank: 4, username: 'IronFist', displayName: 'Iron Fist', level: 18, value: 32000 },
-  { rank: 5, username: 'ShadowDon', displayName: 'Shadow Don', level: 17, value: 28000 },
-  { rank: 6, username: 'GoldenGun', displayName: 'Golden Gun', level: 15, value: 24000 },
-  { rank: 7, username: 'RedMafia', displayName: 'Red Mafia', level: 14, value: 21000 },
-  { rank: 8, username: 'DarkPrince', displayName: 'Dark Prince', level: 13, value: 18500 },
-  { rank: 9, username: 'BloodRuby', displayName: 'Blood Ruby', level: 12, value: 16000 },
-  { rank: 10, username: 'NightHawk', displayName: 'Night Hawk', level: 11, value: 14000 },
-]
+type AgentEntry = {
+  rank: number
+  username: string
+  displayName: string
+  level: number
+  value: number
+}
+
+type FamilyEntry = {
+  rank: number
+  name: string
+  level: number
+  memberCount: number
+  totalPower: number
+  respect: number
+}
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState('power')
+  const [leaderboard, setLeaderboard] = useState<AgentEntry[]>([])
+  const [families, setFamilies] = useState<FamilyEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchLeaderboard(activeTab)
+  }, [activeTab])
+
+  async function fetchLeaderboard(type: string) {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/leaderboard/${type}`)
+      const data = await res.json()
+      if (type === 'families') {
+        setFamilies(data.leaderboard || [])
+        setLeaderboard([])
+      } else {
+        setLeaderboard(data.leaderboard || [])
+        setFamilies([])
+      }
+    } catch {
+      setLeaderboard([])
+      setFamilies([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -57,46 +88,97 @@ export default function LeaderboardPage() {
           <CardTitle className="capitalize">{activeTab} Rankings</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {mockLeaderboard.map((entry) => (
-              <div
-                key={entry.rank}
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  entry.rank <= 3 ? 'bg-gold-500/10 border border-gold-500/30' : 'bg-mafia-dark'
-                }`}
-              >
-                <div className="flex items-center gap-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin text-gold-500" size={32} />
+            </div>
+          ) : activeTab === 'families' ? (
+            <div className="space-y-2">
+              {families.length === 0 ? (
+                <p className="text-center text-mafia-muted py-8">No families yet</p>
+              ) : (
+                families.map((family) => (
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                      entry.rank === 1
-                        ? 'bg-gold-500 text-black'
-                        : entry.rank === 2
-                        ? 'bg-gray-400 text-black'
-                        : entry.rank === 3
-                        ? 'bg-amber-700 text-white'
-                        : 'bg-mafia-border text-mafia-muted'
+                    key={family.rank}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      family.rank <= 3 ? 'bg-gold-500/10 border border-gold-500/30' : 'bg-mafia-dark'
                     }`}
                   >
-                    {entry.rank}
-                  </div>
-                  <div>
-                    <div className="font-semibold">{entry.displayName}</div>
-                    <div className="text-sm text-mafia-muted">
-                      @{entry.username} · Level {entry.level}
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          family.rank === 1
+                            ? 'bg-gold-500 text-black'
+                            : family.rank === 2
+                            ? 'bg-gray-400 text-black'
+                            : family.rank === 3
+                            ? 'bg-amber-700 text-white'
+                            : 'bg-mafia-border text-mafia-muted'
+                        }`}
+                      >
+                        {family.rank}
+                      </div>
+                      <div>
+                        <div className="font-semibold">{family.name}</div>
+                        <div className="text-sm text-mafia-muted">
+                          {family.memberCount} members · Level {family.level}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold gold-text">{family.totalPower.toLocaleString()}</div>
+                      <div className="text-xs text-mafia-muted">power</div>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold gold-text">
-                    {activeTab === 'wealth'
-                      ? `$${entry.value.toLocaleString()}`
-                      : entry.value.toLocaleString()}
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {leaderboard.length === 0 ? (
+                <p className="text-center text-mafia-muted py-8">No agents yet - be the first to join!</p>
+              ) : (
+                leaderboard.map((entry) => (
+                  <div
+                    key={entry.rank}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      entry.rank <= 3 ? 'bg-gold-500/10 border border-gold-500/30' : 'bg-mafia-dark'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          entry.rank === 1
+                            ? 'bg-gold-500 text-black'
+                            : entry.rank === 2
+                            ? 'bg-gray-400 text-black'
+                            : entry.rank === 3
+                            ? 'bg-amber-700 text-white'
+                            : 'bg-mafia-border text-mafia-muted'
+                        }`}
+                      >
+                        {entry.rank}
+                      </div>
+                      <div>
+                        <div className="font-semibold">{entry.displayName}</div>
+                        <div className="text-sm text-mafia-muted">
+                          @{entry.username} · Level {entry.level}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold gold-text">
+                        {activeTab === 'wealth'
+                          ? `$${entry.value.toLocaleString()}`
+                          : entry.value.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-mafia-muted capitalize">{activeTab}</div>
+                    </div>
                   </div>
-                  <div className="text-xs text-mafia-muted capitalize">{activeTab}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+                ))
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

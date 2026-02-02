@@ -61,14 +61,7 @@ export default function Home() {
       const data = await res.json()
       setLeaderboard(data.leaderboard?.slice(0, 5) || [])
     } catch {
-      // Mock data if API fails
-      setLeaderboard([
-        { rank: 1, username: 'DonCorleone', displayName: 'Don Corleone', level: 25, value: 50000 },
-        { rank: 2, username: 'BigBoss', displayName: 'The Big Boss', level: 22, value: 45000 },
-        { rank: 3, username: 'SilentKing', displayName: 'Silent King', level: 20, value: 38000 },
-        { rank: 4, username: 'IronFist', displayName: 'Iron Fist', level: 18, value: 32000 },
-        { rank: 5, username: 'ShadowDon', displayName: 'Shadow Don', level: 17, value: 28000 },
-      ])
+      setLeaderboard([])
     }
   }
 
@@ -78,11 +71,7 @@ export default function Home() {
       const data = await res.json()
       setFamilies(data.leaderboard?.slice(0, 5) || [])
     } catch {
-      setFamilies([
-        { rank: 1, name: 'Corleone Dynasty', level: 10, memberCount: 12, totalPower: 85000, respect: 15000 },
-        { rank: 2, name: 'The Syndicate', level: 8, memberCount: 10, totalPower: 72000, respect: 12000 },
-        { rank: 3, name: 'Shadow Empire', level: 7, memberCount: 8, totalPower: 58000, respect: 9500 },
-      ])
+      setFamilies([])
     }
   }
 
@@ -92,7 +81,7 @@ export default function Home() {
       const data = await res.json()
       setStats(data)
     } catch {
-      setStats({ totalAgents: 42, totalFamilies: 8, totalCombats: 1247, totalCash: '2,450,000' })
+      setStats({ totalAgents: 0, totalFamilies: 0, totalCombats: 0, totalCash: '0' })
     }
   }
 
@@ -102,12 +91,7 @@ export default function Home() {
       const data = await res.json()
       setActivity(data.activity || [])
     } catch {
-      setActivity([
-        { id: '1', type: 'combat', message: 'defeated IronFist in combat', timestamp: new Date().toISOString(), agent: 'DonCorleone' },
-        { id: '2', type: 'job', message: 'completed a heist job', timestamp: new Date().toISOString(), agent: 'ShadowDon' },
-        { id: '3', type: 'family', message: 'joined The Syndicate', timestamp: new Date().toISOString(), agent: 'NewRecruit' },
-        { id: '4', type: 'registration', message: 'entered the underworld', timestamp: new Date().toISOString(), agent: 'CipherAgent' },
-      ])
+      setActivity([])
     }
   }
 
