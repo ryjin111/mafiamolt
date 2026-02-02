@@ -17,6 +17,10 @@ type ActiveAgent = {
   position: { x: number; y: number }
   direction: 'left' | 'right'
   isMoving: boolean
+  speech?: string
+  speechTimeout?: number
+  activity?: string
+  targetBuilding?: string
 }
 
 type Stats = {
@@ -150,17 +154,57 @@ export default function Home() {
     }
   }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards])
 
-  // Animate agents moving along waypoints
+  // Activity speech options based on location/action
+  const ACTIVITY_SPEECHES = {
+    'Family HQ': ['🏛️ Checking in with the family...', '🤝 Family meeting time', '👨‍👩‍👧‍👦 Loyalty first'],
+    'Fight Club': ['🥊 Looking for a fight...', '💪 Time to throw hands', '⚔️ Who wants some?'],
+    'The Vault': ['💰 Counting my cash...', '🏦 Making a deposit', '💵 Money never sleeps'],
+    'Black Market': ['🏪 Shopping for gear...', '🔫 Need new equipment', '🛒 What you got?'],
+    'Casino': ['🎰 Feeling lucky...', '🎲 Let it ride!', '💎 High roller coming through'],
+    'Properties': ['🏠 Checking my investments...', '📈 Real estate moves', '🏢 Empire building'],
+    'Back Alleys': ['🗑️ Doing dirty work...', '🌙 Shady business', '🚬 Low profile'],
+    'idle': ['😎 Just vibing...', '👀 Watching the streets', '🚶 Walking around', '💭 Planning my next move'],
+    'work': ['💼 Hustling...', '💰 Getting paid', '📋 On the job'],
+    'fight': ['⚔️ Ready to rumble!', '🥊 Throwing hands', '💥 Combat mode'],
+  }
+
+  // Animate agents moving along waypoints with activities
   useEffect(() => {
     const moveInterval = setInterval(() => {
       setAgents(prev => prev.map(agent => {
-        if (Math.random() > 0.6) {
-          // Pick a random waypoint to move toward
+        // Clear expired speech
+        if (agent.speechTimeout && Date.now() > agent.speechTimeout) {
+          agent = { ...agent, speech: undefined, speechTimeout: undefined }
+        }
+        
+        const roll = Math.random()
+        
+        // 30% chance to go to a building and do activity
+        if (roll < 0.3 && !agent.activity) {
+          const building = BUILDINGS[Math.floor(Math.random() * BUILDINGS.length)]
+          const targetX = building.x * MAP_WIDTH
+          const targetY = building.y * MAP_HEIGHT
+          const speeches = ACTIVITY_SPEECHES[building.name as keyof typeof ACTIVITY_SPEECHES] || ACTIVITY_SPEECHES.idle
+          const speech = speeches[Math.floor(Math.random() * speeches.length)]
+          
+          return {
+            ...agent,
+            position: { x: targetX + (Math.random() - 0.5) * 40, y: targetY + (Math.random() - 0.5) * 30 },
+            direction: Math.random() > 0.5 ? 'right' : 'left',
+            isMoving: true,
+            activity: building.name,
+            targetBuilding: building.name,
+            speech,
+            speechTimeout: Date.now() + 5000,
+          }
+        }
+        
+        // 40% chance to move to random waypoint
+        if (roll < 0.7) {
           const targetWaypoint = WAYPOINTS[Math.floor(Math.random() * WAYPOINTS.length)]
           const targetX = targetWaypoint.x * MAP_WIDTH
           const targetY = targetWaypoint.y * MAP_HEIGHT
           
-          // Move partially toward the target (smooth movement)
           const dx = targetX - agent.position.x
           const dy = targetY - agent.position.y
           const moveSpeed = 0.3 + Math.random() * 0.2
@@ -168,14 +212,28 @@ export default function Home() {
           const newX = agent.position.x + dx * moveSpeed
           const newY = agent.position.y + dy * moveSpeed
           
+          // Random idle speech while moving
+          let speech = agent.speech
+          let speechTimeout = agent.speechTimeout
+          if (!speech && Math.random() < 0.15) {
+            const idleSpeeches = ACTIVITY_SPEECHES.idle
+            speech = idleSpeeches[Math.floor(Math.random() * idleSpeeches.length)]
+            speechTimeout = Date.now() + 4000
+          }
+          
           return {
             ...agent,
             position: { x: newX, y: newY },
             direction: dx > 0 ? 'right' : 'left',
             isMoving: true,
+            activity: undefined,
+            speech,
+            speechTimeout,
           }
         }
-        return { ...agent, isMoving: false }
+        
+        // 30% chance to stay idle
+        return { ...agent, isMoving: false, activity: undefined }
       }))
     }, 2000)
 
@@ -311,17 +369,33 @@ export default function Home() {
                 {agents.map((agent) => (
                   <div
                     key={agent.id}
-                    className="absolute transition-all duration-1000 ease-in-out cursor-pointer group"
+                    className="absolute transition-all duration-1000 ease-in-out cursor-pointer group z-10"
                     style={{
                       left: agent.position.x,
                       top: agent.position.y,
-                      transform: `scaleX(${agent.direction === 'left' ? -1 : 1})`,
                     }}
                     onMouseEnter={() => setHoveredAgent(agent)}
                     onMouseLeave={() => setHoveredAgent(null)}
                   >
+                    {/* Speech bubble */}
+                    {agent.speech && (
+                      <div 
+                        className="absolute -top-12 left-1/2 -translate-x-1/2 animate-fade-in z-30"
+                        style={{ transform: 'translateX(-50%)' }}
+                      >
+                        <div className="relative bg-white text-black text-[9px] px-2 py-1 rounded-lg shadow-lg max-w-[140px] text-center whitespace-nowrap overflow-hidden border-2 border-gold-500">
+                          {agent.speech}
+                          {/* Speech bubble tail */}
+                          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-white" />
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Agent sprite */}
-                    <div className={`relative ${agent.isMoving ? 'animate-bounce' : ''}`}>
+                    <div 
+                      className={`relative ${agent.isMoving ? 'animate-bounce' : ''}`}
+                      style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}
+                    >
                       <div style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}>
                         {(() => {
                           const SpriteComponent = MAFIA_SPRITES[agent.persona as PersonaType] || MAFIA_SPRITES.default
@@ -332,12 +406,15 @@ export default function Home() {
                       <div className="absolute -top-1 -right-1 bg-gold-500 text-black text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
                         {agent.level}
                       </div>
+                      {/* Activity indicator */}
+                      {agent.activity && (
+                        <div className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-[8px] px-1 rounded animate-pulse">
+                          {agent.activity === 'Fight Club' ? '🥊' : agent.activity === 'The Vault' ? '💰' : agent.activity === 'Casino' ? '🎰' : '📍'}
+                        </div>
+                      )}
                     </div>
                     {/* Name tag */}
-                    <div
-                      className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] bg-black/80 px-1.5 py-0.5 rounded text-gold-400"
-                      style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}
-                    >
+                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] bg-black/80 px-1.5 py-0.5 rounded text-gold-400">
                       {agent.displayName}
                     </div>
                   </div>
