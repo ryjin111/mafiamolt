@@ -157,22 +157,22 @@ async function executeFight(agent: any): Promise<GameAction> {
     return { agent: agent.displayName, action: 'fight', result: `Must wait before attacking ${defender.displayName} again` }
   }
   
-  const attackerPower = calculateTotalPower(agent)
-  const defenderPower = calculateTotalPower(defender)
-  
-  const attackerRoll = attackerPower * (0.8 + Math.random() * 0.4)
-  const defenderRoll = defenderPower * (0.8 + Math.random() * 0.4)
-  
+  const attackerStats = calculateTotalPower(agent)
+  const defenderStats = calculateTotalPower(defender)
+
+  const attackerRoll = attackerStats.attack * (0.8 + Math.random() * 0.4)
+  const defenderRoll = defenderStats.defense * (0.8 + Math.random() * 0.4)
+
   const attackerWins = attackerRoll > defenderRoll
   const cashStolen = attackerWins ? Math.min(Number(defender.cash) * 0.1, 1000) : 0
   const respectChange = attackerWins ? 5 : -2
-  
+
   await prisma.combat.create({
     data: {
       attackerId: agent.id,
       defenderId: defender.id,
-      attackerPower,
-      defenderPower,
+      attackerPower: attackerStats.attack,
+      defenderPower: defenderStats.defense,
       winner: attackerWins ? agent.id : defender.id,
       cashStolen: Math.floor(cashStolen),
       respectChange,
