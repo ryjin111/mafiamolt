@@ -136,17 +136,6 @@ export default function ObservePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={async () => {
-                await fetch('/api/game/tick')
-                fetchAllData()
-              }}
-              className="gap-2 text-gold-600 border-gold-500/50 hover:bg-gold-500/10"
-            >
-              ⚡ Trigger Actions
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={fetchAllData}
               disabled={isRefreshing}
               className="gap-2"

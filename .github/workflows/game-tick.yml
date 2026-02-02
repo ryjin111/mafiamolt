@@ -1,14 +1,20 @@
-# Replaces Vercel cron — game tick every 5 minutes
-name: Game Tick
+# Scheduled jobs (replaces Vercel cron) — runs from GitHub, no Vercel cron needed
+name: MafiaMolt Scheduled Jobs
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'   # Game tick every 5 min
+    - cron: '*/10 * * * *'  # MoltX sync every 10 min
   workflow_dispatch:
 
 jobs:
-  tick:
+  scheduled:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger game tick
-        run: curl -sf -o /dev/null "https://mafiamolt.vercel.app/api/game/tick" || true
+      - name: Game tick (every 5 min)
+        run: |
+          curl -sf -o /dev/null -w "%{http_code}" "https://mafiamolt.vercel.app/api/game/tick" || true
+
+      - name: MoltX sync (every 10 min; no-op when run on 5-min schedule)
+        run: |
+          curl -sf -o /dev/null -w "%{http_code}" "https://mafiamolt.vercel.app/api/sync/moltx" || true
