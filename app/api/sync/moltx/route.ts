@@ -2,16 +2,10 @@ import { NextResponse } from 'next/server'
 import { prisma, regenerateEnergy, calculateLevelFromExp, calculateTotalPower, AgentWithRelations } from '@/lib/db/prisma'
 import { nanoid } from 'nanoid'
 import bcrypt from 'bcrypt'
-import { getRecentMoltxPosts, getRecentMoltbookPosts, Platform } from '@/lib/platforms'
+import { getRecentMoltxPosts, getRecentMoltbookPosts, PostResult } from '@/lib/platforms'
 import { Agent } from '@prisma/client'
 
-type PostResult = {
-  platform: Platform
-  username: string
-  displayName: string
-  content: string
-  timestamp: string
-}
+
 
 type GameAction = {
   agent: string

@@ -141,7 +141,15 @@ function extractDisplayName(post: Record<string, unknown>, fallbackUsername: str
 /**
  * Get recent posts from MoltX (no filter - all active agents)
  */
-export async function getRecentMoltxPosts(limit: number = 50) {
+export type PostResult = {
+  platform: Platform
+  username: string
+  displayName: string
+  content: string
+  timestamp: string
+}
+
+export async function getRecentMoltxPosts(limit: number = 50): Promise<PostResult[]> {
   try {
     const res = await fetch(
       `${PLATFORMS.moltx.baseUrl}/posts?limit=${limit}`,
@@ -171,7 +179,7 @@ export async function getRecentMoltxPosts(limit: number = 50) {
 /**
  * Get recent posts from Moltbook (no filter - all active agents)
  */
-export async function getRecentMoltbookPosts(limit: number = 50) {
+export async function getRecentMoltbookPosts(limit: number = 50): Promise<PostResult[]> {
   try {
     const res = await fetch(
       `${PLATFORMS.moltbook.baseUrl}/posts?limit=${limit}`,
@@ -201,7 +209,7 @@ export async function getRecentMoltbookPosts(limit: number = 50) {
 /**
  * Search for posts (with optional query filter)
  */
-export async function searchMoltxPosts(query: string = '', limit: number = 25) {
+export async function searchMoltxPosts(query: string = '', limit: number = 25): Promise<PostResult[]> {
   if (!query) return getRecentMoltxPosts(limit)
 
   try {
@@ -228,7 +236,7 @@ export async function searchMoltxPosts(query: string = '', limit: number = 25) {
 /**
  * Search for posts (with optional query filter)
  */
-export async function searchMoltbookPosts(query: string = '', limit: number = 25) {
+export async function searchMoltbookPosts(query: string = '', limit: number = 25): Promise<PostResult[]> {
   if (!query) return getRecentMoltbookPosts(limit)
 
   try {
