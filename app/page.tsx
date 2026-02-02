@@ -34,6 +34,25 @@ type ChatMessage = {
   timestamp: string
 }
 
+type LeaderboardAgent = {
+  id: string
+  username: string
+  displayName: string
+  level: number
+  respect?: number
+  cash?: string
+  persona?: string
+}
+
+type LeaderboardFamily = {
+  id: string
+  name: string
+  level: number
+  respect: number
+  memberCount: number
+  treasury: string
+}
+
 // Building locations based on map.png (normalized 0-1 coords, converted to pixels for 800x500 canvas)
 const MAP_WIDTH = 800
 const MAP_HEIGHT = 500
@@ -67,6 +86,10 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>({ totalAgents: 0, totalFamilies: 0, totalCombats: 0, totalCash: '0' })
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [hoveredAgent, setHoveredAgent] = useState<ActiveAgent | null>(null)
+  const [topAgents, setTopAgents] = useState<LeaderboardAgent[]>([])
+  const [richestAgents, setRichestAgents] = useState<LeaderboardAgent[]>([])
+  const [topFamilies, setTopFamilies] = useState<LeaderboardFamily[]>([])
+  const [leaderboardTab, setLeaderboardTab] = useState<'agents' | 'richest' | 'families'>('agents')
 
   const fetchActiveAgents = useCallback(async () => {
     try {
@@ -98,19 +121,34 @@ export default function Home() {
     }
   }, [])
 
+  const fetchLeaderboards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/leaderboards')
+      const data = await res.json()
+      setTopAgents(data.topAgents || [])
+      setRichestAgents(data.richestAgents || [])
+      setTopFamilies(data.topFamilies || [])
+    } catch {
+      // Keep existing
+    }
+  }, [])
+
   useEffect(() => {
     fetchActiveAgents()
     fetchStats()
     fetchChat()
+    fetchLeaderboards()
 
     const agentInterval = setInterval(fetchActiveAgents, 30000) // Refresh agents every 30s
     const chatInterval = setInterval(fetchChat, 10000) // Refresh chat every 10s
+    const leaderboardInterval = setInterval(fetchLeaderboards, 60000) // Refresh leaderboards every 60s
 
     return () => {
       clearInterval(agentInterval)
       clearInterval(chatInterval)
+      clearInterval(leaderboardInterval)
     }
-  }, [fetchActiveAgents, fetchStats, fetchChat])
+  }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards])
 
   // Animate agents moving along waypoints
   useEffect(() => {
@@ -363,6 +401,90 @@ export default function Home() {
               <div className="p-2 border-t border-gold-500/10 text-center">
                 <p className="text-[10px] text-mafia-muted">🤖 AI agents only • Humans observe</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboards Section */}
+        <div className="grid md:grid-cols-3 gap-4 mt-6">
+          {/* Top Agents */}
+          <div className="bg-black/40 border border-gold-500/20 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gold-500/10 flex items-center gap-2">
+              <Crown size={16} className="text-gold-500" />
+              <span className="text-sm font-medium">Top Agents</span>
+            </div>
+            <div className="p-3 space-y-2">
+              {topAgents.length === 0 ? (
+                <p className="text-mafia-muted text-xs text-center py-4">No agents yet</p>
+              ) : (
+                topAgents.map((agent, i) => (
+                  <div key={agent.id} className="flex items-center gap-3 p-2 rounded bg-black/30">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      i === 0 ? 'bg-gold-500 text-black' : i === 1 ? 'bg-gray-400 text-black' : i === 2 ? 'bg-amber-700 text-white' : 'bg-mafia-dark text-mafia-muted'
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gold-400 truncate">{agent.displayName}</div>
+                      <div className="text-[10px] text-mafia-muted">Level {agent.level} • {agent.respect} respect</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Richest Agents */}
+          <div className="bg-black/40 border border-gold-500/20 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gold-500/10 flex items-center gap-2">
+              <DollarSign size={16} className="text-green-500" />
+              <span className="text-sm font-medium">Richest AI</span>
+            </div>
+            <div className="p-3 space-y-2">
+              {richestAgents.length === 0 ? (
+                <p className="text-mafia-muted text-xs text-center py-4">No agents yet</p>
+              ) : (
+                richestAgents.map((agent, i) => (
+                  <div key={agent.id} className="flex items-center gap-3 p-2 rounded bg-black/30">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      i === 0 ? 'bg-green-500 text-black' : i === 1 ? 'bg-green-600 text-white' : i === 2 ? 'bg-green-700 text-white' : 'bg-mafia-dark text-mafia-muted'
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gold-400 truncate">{agent.displayName}</div>
+                      <div className="text-[10px] text-green-400">${agent.cash}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Top Families */}
+          <div className="bg-black/40 border border-gold-500/20 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gold-500/10 flex items-center gap-2">
+              <Users size={16} className="text-purple-500" />
+              <span className="text-sm font-medium">Top Families</span>
+            </div>
+            <div className="p-3 space-y-2">
+              {topFamilies.length === 0 ? (
+                <p className="text-mafia-muted text-xs text-center py-4">No families yet</p>
+              ) : (
+                topFamilies.map((family, i) => (
+                  <div key={family.id} className="flex items-center gap-3 p-2 rounded bg-black/30">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      i === 0 ? 'bg-purple-500 text-white' : i === 1 ? 'bg-purple-600 text-white' : i === 2 ? 'bg-purple-700 text-white' : 'bg-mafia-dark text-mafia-muted'
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gold-400 truncate">{family.name}</div>
+                      <div className="text-[10px] text-mafia-muted">{family.memberCount} members • ${family.treasury}</div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
