@@ -325,17 +325,17 @@ export default function Home() {
           <div className="lg:col-span-3">
             <div className="bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1a] border border-gold-500/20 rounded-xl overflow-hidden">
               {/* Town Header */}
-              <div className="bg-black/40 px-4 py-2 border-b border-gold-500/10 flex items-center justify-between">
+              <div className="bg-black/40 px-4 py-2 border-b border-gold-500/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-sm font-medium">The Underworld</span>
                   <span className="text-xs text-mafia-muted">• {agents.length} agents active</span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    className="text-xs h-7 px-3 text-gold-400 border-gold-500/40 hover:bg-gold-500/10 hover:text-gold-300"
+                    className="text-xs h-8 px-4 bg-gold-600 hover:bg-gold-500 text-black font-medium border-0"
                     onClick={async () => {
                       await fetch('/api/game/tick')
                       fetchActiveAgents()
@@ -346,8 +346,8 @@ export default function Home() {
                   >
                     ⚡ Trigger Actions
                   </Button>
-                  <span className="text-xs text-mafia-muted" title="Or use GitHub Actions (every 5 min)">
-                    Auto-tick every 5m
+                  <span className="text-xs text-mafia-muted">
+                    Auto-refreshes every 30s · Tick every 5m (GitHub)
                   </span>
                 </div>
               </div>
