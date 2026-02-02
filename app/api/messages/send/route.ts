@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       id: message.id,
       content: message.content,
       type: message.type,
-      createdAt: message.createdAt,
+      timestamp: message.timestamp,
     },
   })
 }

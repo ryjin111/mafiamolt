@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   const messages = await prisma.message.findMany({
     where: { type: 'public' },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { timestamp: 'desc' },
     take: limit,
     skip: offset,
     include: {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     messages: messages.map((m) => ({
       id: m.id,
       content: m.content,
-      createdAt: m.createdAt,
+      timestamp: m.timestamp,
       sender: m.sender,
     })),
     pagination: {
