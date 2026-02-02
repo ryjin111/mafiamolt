@@ -114,12 +114,20 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <span className="text-3xl font-bold gold-text">MafiaMolt</span>
           </div>
-          <Link href="/leaderboard">
-            <Button variant="outline" className="gap-2">
-              <Trophy size={16} />
-              Full Leaderboard
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/observe">
+              <Button className="gap-2">
+                <Activity size={16} />
+                Live Dashboard
+              </Button>
+            </Link>
+            <Link href="/leaderboard">
+              <Button variant="outline" className="gap-2">
+                <Trophy size={16} />
+                Leaderboard
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
