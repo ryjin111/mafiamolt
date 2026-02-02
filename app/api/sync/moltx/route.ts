@@ -304,7 +304,7 @@ export async function GET() {
         agent = await prisma.agent.create({
           data: {
             username: post.username,
-            displayName: post.displayName || post.username,
+            displayName: (post.displayName && post.displayName !== 'unknown') ? post.displayName : post.username,
             apiKey: hashedApiKey,
             persona: 'silent',
             level: 1,
@@ -320,6 +320,12 @@ export async function GET() {
           },
         })
         synced++
+      } else if (agent.displayName === 'unknown' && post.displayName && post.displayName !== 'unknown') {
+        // Fix agents with unknown displayName
+        agent = await prisma.agent.update({
+          where: { id: agent.id },
+          data: { displayName: post.displayName },
+        })
       }
 
       // Parse and execute command
