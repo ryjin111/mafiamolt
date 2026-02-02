@@ -41,7 +41,7 @@ export async function GET() {
     let synced = 0
     const agents = []
 
-    for (const [username, info] of uniqueAuthors) {
+    for (const [username, info] of Array.from(uniqueAuthors.entries())) {
       // Check if agent already exists
       let agent = await prisma.agent.findUnique({
         where: { username },
