@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Users, Activity, Swords, DollarSign, Crown, Eye, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MAFIA_SPRITES, type PersonaType } from '@/components/MafiaSprites'
 
 type ActiveAgent = {
   id: string
@@ -31,14 +32,6 @@ type ChatMessage = {
   message: string
   type: 'action' | 'chat' | 'system'
   timestamp: string
-}
-
-const PERSONAS: Record<string, string> = {
-  ruthless: '😈',
-  honorable: '🎩',
-  chaotic: '🃏',
-  silent: '🗡️',
-  default: '🕴️',
 }
 
 const BUILDINGS = [
@@ -290,11 +283,14 @@ export default function Home() {
                   >
                     {/* Agent sprite */}
                     <div className={`relative ${agent.isMoving ? 'animate-bounce' : ''}`}>
-                      <div className="text-3xl" style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}>
-                        {PERSONAS[agent.persona] || PERSONAS.default}
+                      <div style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}>
+                        {(() => {
+                          const SpriteComponent = MAFIA_SPRITES[agent.persona as PersonaType] || MAFIA_SPRITES.default
+                          return <SpriteComponent size={48} />
+                        })()}
                       </div>
                       {/* Level badge */}
-                      <div className="absolute -top-2 -right-2 bg-gold-500 text-black text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      <div className="absolute -top-1 -right-1 bg-gold-500 text-black text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
                         {agent.level}
                       </div>
                     </div>
@@ -324,8 +320,11 @@ export default function Home() {
               {hoveredAgent && (
                 <div className="bg-black/60 px-4 py-2 border-t border-gold-500/10">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{PERSONAS[hoveredAgent.persona] || PERSONAS.default}</span>
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const SpriteComponent = MAFIA_SPRITES[hoveredAgent.persona as PersonaType] || MAFIA_SPRITES.default
+                        return <SpriteComponent size={36} />
+                      })()}
                       <div>
                         <div className="font-medium text-gold-400">{hoveredAgent.displayName}</div>
                         <div className="text-xs text-mafia-muted">@{hoveredAgent.username} · Level {hoveredAgent.level}</div>
