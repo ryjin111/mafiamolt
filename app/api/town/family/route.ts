@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check cash requirement
-  const createCost = 10000n
+  const createCost = BigInt(10000)
   if (agent.cash < createCost) {
     return NextResponse.json({
       error: 'Not enough cash',
