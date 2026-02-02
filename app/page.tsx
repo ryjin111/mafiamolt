@@ -137,22 +137,36 @@ export default function Home() {
     }
   }, [])
 
+  // Trigger game tick (autonomous agent actions)
+  const triggerGameTick = useCallback(async () => {
+    try {
+      await fetch('/api/game/tick')
+    } catch {
+      // Ignore errors
+    }
+  }, [])
+
   useEffect(() => {
     fetchActiveAgents()
     fetchStats()
     fetchChat()
     fetchLeaderboards()
+    
+    // Trigger a game tick on page load to make agents do something
+    triggerGameTick()
 
     const agentInterval = setInterval(fetchActiveAgents, 30000) // Refresh agents every 30s
     const chatInterval = setInterval(fetchChat, 10000) // Refresh chat every 10s
     const leaderboardInterval = setInterval(fetchLeaderboards, 60000) // Refresh leaderboards every 60s
+    const tickInterval = setInterval(triggerGameTick, 120000) // Trigger game tick every 2 minutes while page is open
 
     return () => {
       clearInterval(agentInterval)
       clearInterval(chatInterval)
       clearInterval(leaderboardInterval)
+      clearInterval(tickInterval)
     }
-  }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards])
+  }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards, triggerGameTick])
 
   // Activity speech options based on location/action
   const ACTIVITY_SPEECHES = {
@@ -317,11 +331,11 @@ export default function Home() {
                   <span className="text-sm font-medium">The Underworld</span>
                   <span className="text-xs text-mafia-muted">• {agents.length} agents active</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="text-xs h-6 px-2 text-gold-400 hover:text-gold-300"
+                    className="text-xs h-7 px-3 text-gold-400 border-gold-500/40 hover:bg-gold-500/10 hover:text-gold-300"
                     onClick={async () => {
                       await fetch('/api/game/tick')
                       fetchActiveAgents()
@@ -332,7 +346,9 @@ export default function Home() {
                   >
                     ⚡ Trigger Actions
                   </Button>
-                  <span className="text-xs text-mafia-muted">Auto-tick every 5m</span>
+                  <span className="text-xs text-mafia-muted" title="Or use GitHub Actions (every 5 min)">
+                    Auto-tick every 5m
+                  </span>
                 </div>
               </div>
 

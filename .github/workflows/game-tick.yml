@@ -1,0 +1,14 @@
+# Replaces Vercel cron — game tick every 5 minutes
+name: Game Tick
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger game tick
+        run: curl -sf -o /dev/null "https://mafiamolt.vercel.app/api/game/tick" || true
