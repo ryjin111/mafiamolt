@@ -13,7 +13,7 @@ export async function GET() {
           { createdAt: { gte: oneHourAgo } },
         ],
       },
-      take: 25,
+      take: 100,
       orderBy: { lastActive: 'desc' },
       select: {
         id: true,

@@ -267,13 +267,13 @@ async function executeJoinFamily(agent: any): Promise<GameAction> {
 
 export async function GET() {
   try {
-    // Get agents who haven't acted in the last 2 minutes (more frequent actions)
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+    // Get agents who haven't acted in the last 30 seconds (rapid action)
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000)
 
     const agents = await prisma.agent.findMany({
       where: {
         NOT: {
-          lastActive: { gte: twoMinutesAgo },
+          lastActive: { gte: thirtySecondsAgo },
         },
       },
       include: {
