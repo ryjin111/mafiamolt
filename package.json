@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && npx ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts && next build",
+    "build": "prisma generate && prisma db push && npx ts-node --project prisma/tsconfig.json prisma/seed.ts && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
@@ -13,7 +13,7 @@
     "db:seed": "npx prisma db seed"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts"
   },
   "keywords": [
     "mafia",
