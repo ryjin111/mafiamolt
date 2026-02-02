@@ -334,6 +334,17 @@ export async function POST(request: NextRequest) {
         }
     }
 
+    // Record the action as a message so it shows in the feed
+    if (action && action.result !== 'Agent is busy') {
+      await prisma.message.create({
+        data: {
+          senderId: agent.id,
+          content: `${action.result}${action.rewards ? ` (${Object.entries(action.rewards).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''}`,
+          type: 'public',
+        },
+      })
+    }
+
     // Set cooldown to prevent spam
     await prisma.cooldown.upsert({
       where: {
