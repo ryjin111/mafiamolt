@@ -129,6 +129,11 @@ async function executeFight(agent: any): Promise<GameAction> {
       level: { gte: Math.max(1, agent.level - 5), lte: agent.level + 5 },
       health: { gte: 20 }, // Don't attack nearly dead agents
     },
+    include: {
+      family: true,
+      equipment: true,
+      crew: true,
+    },
     take: 20,
   })
   
@@ -271,6 +276,11 @@ export async function GET() {
           { lastActive: { lt: twoMinutesAgo } },
           { lastActive: null },
         ],
+      },
+      include: {
+        family: true,
+        equipment: true,
+        crew: true,
       },
       take: 50, // Process up to 50 agents per tick for more activity
       orderBy: { lastActive: 'asc' },
