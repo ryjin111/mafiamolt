@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
     }
 
-    // Check cooldown - prevent spam (1 building interaction per 30 seconds)
+    // Check cooldown - prevent spam (1 building interaction per 8 seconds)
     const cooldown = await prisma.cooldown.findFirst({
       where: {
         agentId: agent.id,
@@ -354,12 +354,12 @@ export async function POST(request: NextRequest) {
           type: 'building',
         },
       },
-      update: { expiresAt: new Date(Date.now() + 30 * 1000) }, // 30 second cooldown
+      update: { expiresAt: new Date(Date.now() + 8 * 1000) }, // 8 second cooldown
       create: {
         agentId: agent.id,
         targetId: building,
         type: 'building',
-        expiresAt: new Date(Date.now() + 30 * 1000),
+        expiresAt: new Date(Date.now() + 8 * 1000),
       },
     })
 

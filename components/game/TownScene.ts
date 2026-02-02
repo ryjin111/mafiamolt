@@ -71,7 +71,11 @@ class AgentSprite {
 
   // Autonomous movement
   nextMoveTime: number = 0
-  moveInterval: number = 2000 // ms between decisions
+  moveInterval: number = 3000 // ms between decisions
+
+  // Building cooldown tracking
+  lastBuildingVisit: number = 0
+  buildingCooldown: number = 10000 // 10s local cooldown to match API
 
   constructor(scene: TownScene, data: AgentData) {
     this.scene = scene
@@ -297,9 +301,13 @@ class AgentSprite {
     const roll = Math.random()
     const mapWidth = this.scene.mapWidth
     const mapHeight = this.scene.mapHeight
+    const now = this.scene.time.now
 
-    // 30% chance to go to a building
-    if (roll < 0.3) {
+    // Check if building cooldown has passed
+    const canVisitBuilding = now - this.lastBuildingVisit > this.buildingCooldown
+
+    // 30% chance to go to a building (if not on cooldown)
+    if (roll < 0.3 && canVisitBuilding) {
       const building = this.scene.config.buildings[
         Math.floor(Math.random() * this.scene.config.buildings.length)
       ]
@@ -326,8 +334,9 @@ class AgentSprite {
       const buildingSpeeches = speeches[building.name] || ['👀 On the move...']
       this.showSpeech(buildingSpeeches[Math.floor(Math.random() * buildingSpeeches.length)])
 
-      // Trigger building interaction
+      // Trigger building interaction and set cooldown
       this.scene.config.onBuildingInteraction?.(this.data.id, building.name)
+      this.lastBuildingVisit = this.scene.time.now
 
     // 40% chance to move to waypoint
     } else if (roll < 0.7) {

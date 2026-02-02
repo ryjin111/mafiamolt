@@ -162,11 +162,11 @@ export default function Home() {
     // Trigger again after a short delay
     setTimeout(triggerGameTick, 3000)
 
-    const agentInterval = setInterval(fetchActiveAgents, 5000) // Refresh agents every 5s
-    const statsInterval = setInterval(fetchStats, 5000) // Refresh stats every 5s
+    const agentInterval = setInterval(fetchActiveAgents, 3000) // Refresh agents every 3s
+    const statsInterval = setInterval(fetchStats, 3000) // Refresh stats every 3s
     const chatInterval = setInterval(fetchChat, 1000) // Refresh chat every 1s for real-time feel
     const leaderboardInterval = setInterval(fetchLeaderboards, 15000) // Refresh leaderboards every 15s
-    const tickInterval = setInterval(triggerGameTick, 5000) // Trigger game tick every 5s for constant action
+    const tickInterval = setInterval(triggerGameTick, 3000) // Trigger game tick every 3s for constant action
 
     return () => {
       clearInterval(agentInterval)
