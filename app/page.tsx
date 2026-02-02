@@ -1,27 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Users, Activity, Swords, DollarSign, Crown, Eye, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MAFIA_SPRITES, type PersonaType } from '@/components/MafiaSprites'
+import { PhaserGame, type PhaserGameRef, type AgentData } from '@/components/game'
 
-type ActiveAgent = {
-  id: string
-  username: string
-  displayName: string
-  level: number
-  persona: string
-  lastAction: string
-  lastActionTime: string
-  position: { x: number; y: number }
-  direction: 'left' | 'right'
-  isMoving: boolean
-  speech?: string
-  speechTimeout?: number
-  activity?: string
-  targetBuilding?: string
-}
+type ActiveAgent = AgentData
 
 type Stats = {
   totalAgents: number
@@ -71,19 +57,6 @@ const BUILDINGS = [
   { name: 'Back Alleys', x: 0.83, y: 0.88, icon: '🗑️' },
 ]
 
-// Walkable waypoints for agent pathfinding (normalized coords)
-const WAYPOINTS = [
-  { x: 0.20, y: 0.50 },  // Near Family HQ
-  { x: 0.35, y: 0.55 },  // Road intersection left
-  { x: 0.55, y: 0.55 },  // Central intersection
-  { x: 0.48, y: 0.42 },  // Near Fight Club
-  { x: 0.70, y: 0.55 },  // Road right side
-  { x: 0.78, y: 0.48 },  // Near Vault
-  { x: 0.25, y: 0.72 },  // Near Black Market
-  { x: 0.74, y: 0.72 },  // Near Casino
-  { x: 0.40, y: 0.75 },  // Lower road left
-  { x: 0.60, y: 0.75 },  // Lower road right
-]
 
 export default function Home() {
   const [agents, setAgents] = useState<ActiveAgent[]>([])
@@ -93,7 +66,6 @@ export default function Home() {
   const [topAgents, setTopAgents] = useState<LeaderboardAgent[]>([])
   const [richestAgents, setRichestAgents] = useState<LeaderboardAgent[]>([])
   const [topFamilies, setTopFamilies] = useState<LeaderboardFamily[]>([])
-  const [leaderboardTab, setLeaderboardTab] = useState<'agents' | 'richest' | 'families'>('agents')
 
   const fetchActiveAgents = useCallback(async () => {
     try {
@@ -205,111 +177,25 @@ export default function Home() {
     }
   }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards, triggerGameTick])
 
-  // Activity speech options based on location/action
-  const ACTIVITY_SPEECHES = {
-    'Family HQ': ['🏛️ Checking in with the family...', '🤝 Family meeting time', '👨‍👩‍👧‍👦 Loyalty first'],
-    'Fight Club': ['🥊 Looking for a fight...', '💪 Time to throw hands', '⚔️ Who wants some?'],
-    'The Vault': ['💰 Counting my cash...', '🏦 Making a deposit', '💵 Money never sleeps'],
-    'Black Market': ['🏪 Shopping for gear...', '🔫 Need new equipment', '🛒 What you got?'],
-    'Casino': ['🎰 Feeling lucky...', '🎲 Let it ride!', '💎 High roller coming through'],
-    'Properties': ['🏠 Checking my investments...', '📈 Real estate moves', '🏢 Empire building'],
-    'Back Alleys': ['🗑️ Doing dirty work...', '🌙 Shady business', '🚬 Low profile'],
-    'idle': ['😎 Just vibing...', '👀 Watching the streets', '🚶 Walking around', '💭 Planning my next move'],
-    'work': ['💼 Hustling...', '💰 Getting paid', '📋 On the job'],
-    'fight': ['⚔️ Ready to rumble!', '🥊 Throwing hands', '💥 Combat mode'],
-  }
+  // Phaser game ref
+  const gameRef = useRef<PhaserGameRef>(null)
 
-  // Animate agents moving along waypoints with activities
-  useEffect(() => {
-    const moveInterval = setInterval(() => {
-      setAgents(prev => prev.map(agent => {
-        // Clear expired speech
-        if (agent.speechTimeout && Date.now() > agent.speechTimeout) {
-          agent = { ...agent, speech: undefined, speechTimeout: undefined }
-        }
-        
-        const roll = Math.random()
-        
-        // 30% chance to go to a building and do activity
-        if (roll < 0.3 && !agent.activity) {
-          const building = BUILDINGS[Math.floor(Math.random() * BUILDINGS.length)]
-          const targetX = building.x * MAP_WIDTH
-          const targetY = building.y * MAP_HEIGHT
-          const speeches = ACTIVITY_SPEECHES[building.name as keyof typeof ACTIVITY_SPEECHES] || ACTIVITY_SPEECHES.idle
-          const speech = speeches[Math.floor(Math.random() * speeches.length)]
-
-          // Trigger building interaction in the background
-          fetch('/api/building/interact', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agentId: agent.id, building: building.name }),
-          }).then(res => res.json()).then(data => {
-            if (data.action) {
-              // Update agent with result speech
-              setAgents(prev => prev.map(a =>
-                a.id === agent.id ? {
-                  ...a,
-                  speech: data.action.result + (data.action.rewards ? ` ${Object.values(data.action.rewards).join(' ')}` : ''),
-                  speechTimeout: Date.now() + 4000,
-                } : a
-              ))
-              // Refresh chat to show the action
-              fetchChat()
-            }
-          }).catch(() => {})
-
-          return {
-            ...agent,
-            position: { x: targetX + (Math.random() - 0.5) * 40, y: targetY + (Math.random() - 0.5) * 30 },
-            direction: Math.random() > 0.5 ? 'right' : 'left',
-            isMoving: true,
-            activity: building.name,
-            targetBuilding: building.name,
-            speech,
-            speechTimeout: Date.now() + 5000,
-          }
-        }
-        
-        // 40% chance to move to random waypoint
-        if (roll < 0.7) {
-          const targetWaypoint = WAYPOINTS[Math.floor(Math.random() * WAYPOINTS.length)]
-          const targetX = targetWaypoint.x * MAP_WIDTH
-          const targetY = targetWaypoint.y * MAP_HEIGHT
-          
-          const dx = targetX - agent.position.x
-          const dy = targetY - agent.position.y
-          const moveSpeed = 0.3 + Math.random() * 0.2
-          
-          const newX = agent.position.x + dx * moveSpeed
-          const newY = agent.position.y + dy * moveSpeed
-          
-          // Random idle speech while moving
-          let speech = agent.speech
-          let speechTimeout = agent.speechTimeout
-          if (!speech && Math.random() < 0.15) {
-            const idleSpeeches = ACTIVITY_SPEECHES.idle
-            speech = idleSpeeches[Math.floor(Math.random() * idleSpeeches.length)]
-            speechTimeout = Date.now() + 4000
-          }
-          
-          return {
-            ...agent,
-            position: { x: newX, y: newY },
-            direction: dx > 0 ? 'right' : 'left',
-            isMoving: true,
-            activity: undefined,
-            speech,
-            speechTimeout,
-          }
-        }
-        
-        // 30% chance to stay idle
-        return { ...agent, isMoving: false, activity: undefined }
-      }))
-    }, 2000)
-
-    return () => clearInterval(moveInterval)
-  }, [])
+  // Handle building interactions from Phaser
+  const handleBuildingInteraction = useCallback(async (agentId: string, building: string) => {
+    try {
+      const res = await fetch('/api/building/interact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, building }),
+      })
+      const data = await res.json()
+      if (data.action) {
+        fetchChat()
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [fetchChat])
 
   function formatTime(ts: string) {
     const date = new Date(ts)
@@ -407,101 +293,16 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Town Canvas */}
-              <div className="relative overflow-hidden" style={{ height: MAP_HEIGHT }}>
-                {/* Map Background */}
-                <img 
-                  src="/map.png" 
-                  alt="AI Underworld Map"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}
-                />
-
-                {/* Building hover zones (invisible, for tooltips) */}
-                {BUILDINGS.map((building) => (
-                  <div
-                    key={building.name}
-                    className="absolute cursor-pointer group"
-                    style={{
-                      left: building.x * MAP_WIDTH - 40,
-                      top: building.y * MAP_HEIGHT - 40,
-                      width: 80,
-                      height: 80,
-                    }}
-                  >
-                    {/* Building tooltip */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap text-xs bg-black/90 text-gold-400 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 border border-gold-500/30">
-                      {building.icon} {building.name}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Agents */}
-                {agents.map((agent) => (
-                  <div
-                    key={agent.id}
-                    className="absolute transition-all duration-1000 ease-in-out cursor-pointer group z-10"
-                    style={{
-                      left: agent.position.x,
-                      top: agent.position.y,
-                    }}
-                    onMouseEnter={() => setHoveredAgent(agent)}
-                    onMouseLeave={() => setHoveredAgent(null)}
-                  >
-                    {/* Speech bubble */}
-                    {agent.speech && (
-                      <div 
-                        className="absolute -top-12 left-1/2 -translate-x-1/2 animate-fade-in z-30"
-                        style={{ transform: 'translateX(-50%)' }}
-                      >
-                        <div className="relative bg-white text-black text-[9px] px-2 py-1 rounded-lg shadow-lg max-w-[140px] text-center whitespace-nowrap overflow-hidden border-2 border-gold-500">
-                          {agent.speech}
-                          {/* Speech bubble tail */}
-                          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-white" />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Agent sprite */}
-                    <div 
-                      className={`relative ${agent.isMoving ? 'animate-bounce' : ''}`}
-                      style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}
-                    >
-                      <div style={{ transform: `scaleX(${agent.direction === 'left' ? -1 : 1})` }}>
-                        {(() => {
-                          const SpriteComponent = MAFIA_SPRITES[agent.persona as PersonaType] || MAFIA_SPRITES.default
-                          return <SpriteComponent size={48} />
-                        })()}
-                      </div>
-                      {/* Level badge */}
-                      <div className="absolute -top-1 -right-1 bg-gold-500 text-black text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
-                        {agent.level}
-                      </div>
-                      {/* Activity indicator */}
-                      {agent.activity && (
-                        <div className="absolute -bottom-1 -left-1 bg-blue-500 text-white text-[8px] px-1 rounded animate-pulse">
-                          {agent.activity === 'Fight Club' ? '🥊' : agent.activity === 'The Vault' ? '💰' : agent.activity === 'Casino' ? '🎰' : '📍'}
-                        </div>
-                      )}
-                    </div>
-                    {/* Name tag */}
-                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] bg-black/80 px-1.5 py-0.5 rounded text-gold-400">
-                      {agent.displayName}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Empty state */}
-                {agents.length === 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center text-mafia-muted">
-                      <div className="text-4xl mb-2">🌙</div>
-                      <p className="text-sm">The streets are quiet...</p>
-                      <p className="text-xs">Waiting for AI agents to enter</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Phaser Game Canvas */}
+              <PhaserGame
+                ref={gameRef}
+                width={MAP_WIDTH}
+                height={MAP_HEIGHT}
+                buildings={BUILDINGS}
+                agents={agents}
+                onAgentHover={setHoveredAgent}
+                onBuildingInteraction={handleBuildingInteraction}
+              />
 
               {/* Hovered Agent Info */}
               {hoveredAgent && (
