@@ -19,30 +19,36 @@ async function decideAction(agent: {
   familyId: string | null
   persona: string | null
 }): Promise<'work' | 'fight' | 'rest' | 'join_family'> {
-  // Persona-based behavior weights
-  const persona = agent.persona || 'balanced'
-  
-  if (agent.energy < 15) return 'rest'
-  if (agent.health < 30) return 'rest'
-  
+  // Persona-based behavior weights (matching frontend personas)
+  const persona = agent.persona || 'default'
+
+  if (agent.energy < 10) return 'rest'
+  if (agent.health < 20) return 'rest'
+
   // Random decision based on persona
   const roll = Math.random()
-  
+
   switch (persona) {
-    case 'aggressive':
-      if (roll < 0.5 && agent.health >= 50) return 'fight'
+    case 'ruthless': // Aggressive fighter
+      if (roll < 0.6 && agent.health >= 40) return 'fight'
       return 'work'
-    case 'hustler':
-      if (roll < 0.8) return 'work'
+    case 'honorable': // Balanced, prefers family
+      if (!agent.familyId && roll < 0.4) return 'join_family'
+      if (roll < 0.7) return 'work'
       return 'fight'
-    case 'social':
-      if (!agent.familyId && roll < 0.3) return 'join_family'
+    case 'chaotic': // Unpredictable
+      if (roll < 0.4) return 'fight'
+      if (roll < 0.7) return 'work'
+      if (!agent.familyId) return 'join_family'
       return 'work'
-    case 'silent':
-    case 'balanced':
-    default:
-      if (roll < 0.6) return 'work'
-      if (roll < 0.8 && agent.health >= 60) return 'fight'
+    case 'silent': // Assassin - works then strikes
+      if (roll < 0.5) return 'work'
+      if (roll < 0.8 && agent.health >= 50) return 'fight'
+      return 'work'
+    case 'default':
+    default: // Standard mobster
+      if (roll < 0.5) return 'work'
+      if (roll < 0.75 && agent.health >= 50) return 'fight'
       if (!agent.familyId && roll < 0.9) return 'join_family'
       return 'work'
   }
@@ -116,13 +122,14 @@ async function executeWork(agent: any): Promise<GameAction> {
 }
 
 async function executeFight(agent: any): Promise<GameAction> {
-  // Find a random target (not self, similar level range)
+  // Find a random target (not self, wider level range for more fights)
   const targets = await prisma.agent.findMany({
     where: {
       id: { not: agent.id },
-      level: { gte: agent.level - 3, lte: agent.level + 3 },
+      level: { gte: Math.max(1, agent.level - 5), lte: agent.level + 5 },
+      health: { gte: 20 }, // Don't attack nearly dead agents
     },
-    take: 10,
+    take: 20,
   })
   
   if (targets.length === 0) {
@@ -196,7 +203,7 @@ async function executeFight(agent: any): Promise<GameAction> {
     })
   }
   
-  // Set cooldown
+  // Set cooldown (3 min cooldown for faster action)
   await prisma.cooldown.upsert({
     where: {
       agentId_targetId_type: {
@@ -209,10 +216,10 @@ async function executeFight(agent: any): Promise<GameAction> {
       agentId: agent.id,
       targetId: defender.id,
       type: 'attack',
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min cooldown
+      expiresAt: new Date(Date.now() + 3 * 60 * 1000), // 3 min cooldown
     },
     update: {
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 3 * 60 * 1000),
     },
   })
   
@@ -255,17 +262,17 @@ async function executeJoinFamily(agent: any): Promise<GameAction> {
 
 export async function GET() {
   try {
-    // Get all agents who haven't acted in the last 5 minutes
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
-    
+    // Get agents who haven't acted in the last 2 minutes (more frequent actions)
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+
     const agents = await prisma.agent.findMany({
       where: {
         OR: [
-          { lastActive: { lt: fiveMinutesAgo } },
+          { lastActive: { lt: twoMinutesAgo } },
           { lastActive: null },
         ],
       },
-      take: 20, // Process up to 20 agents per tick
+      take: 50, // Process up to 50 agents per tick for more activity
       orderBy: { lastActive: 'asc' },
     })
     

@@ -1,0 +1,39 @@
+name: MafiaMolt Game Loop
+
+on:
+  schedule:
+    # Game tick every minute (GitHub Actions minimum is every 5 min for free tier)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  game-tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Game Tick
+        run: |
+          response=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/game/tick")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Game Tick Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Game tick failed with status $http_code"
+            exit 1
+          fi
+
+      - name: Sync Platforms
+        run: |
+          response=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/sync/moltx")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Sync Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Sync failed with status $http_code"
+            exit 1
+          fi

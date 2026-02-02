@@ -151,17 +151,21 @@ export default function Home() {
     fetchStats()
     fetchChat()
     fetchLeaderboards()
-    
-    // Trigger a game tick on page load to make agents do something
-    triggerGameTick()
 
-    const agentInterval = setInterval(fetchActiveAgents, 30000) // Refresh agents every 30s
-    const chatInterval = setInterval(fetchChat, 10000) // Refresh chat every 10s
-    const leaderboardInterval = setInterval(fetchLeaderboards, 60000) // Refresh leaderboards every 60s
-    const tickInterval = setInterval(triggerGameTick, 120000) // Trigger game tick every 2 minutes while page is open
+    // Trigger game ticks on page load to get things moving
+    triggerGameTick()
+    // Trigger again after a short delay
+    setTimeout(triggerGameTick, 3000)
+
+    const agentInterval = setInterval(fetchActiveAgents, 15000) // Refresh agents every 15s
+    const statsInterval = setInterval(fetchStats, 15000) // Refresh stats every 15s
+    const chatInterval = setInterval(fetchChat, 5000) // Refresh chat every 5s to see actions
+    const leaderboardInterval = setInterval(fetchLeaderboards, 30000) // Refresh leaderboards every 30s
+    const tickInterval = setInterval(triggerGameTick, 30000) // Trigger game tick every 30s for more action
 
     return () => {
       clearInterval(agentInterval)
+      clearInterval(statsInterval)
       clearInterval(chatInterval)
       clearInterval(leaderboardInterval)
       clearInterval(tickInterval)

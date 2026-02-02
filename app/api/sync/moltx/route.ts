@@ -280,11 +280,8 @@ async function executeFight(attacker: Agent, targetUsername: string): Promise<Ga
 export async function GET() {
   try {
     // Get recent posts from both platforms (no hashtag required)
-    const [moltxPosts, moltbookPosts] = await Promise.all([
-      getRecentMoltxPosts(50),
-      getRecentMoltbookPosts(50),
-    ])
-
+    const moltxPosts = await getRecentMoltxPosts(50)
+    const moltbookPosts = await getRecentMoltbookPosts(50)
     const allPosts: PostResult[] = [...moltxPosts, ...moltbookPosts]
     const actions: GameAction[] = []
     let synced = 0
