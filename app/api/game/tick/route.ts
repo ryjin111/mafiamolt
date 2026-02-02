@@ -274,7 +274,7 @@ export async function GET() {
       where: {
         OR: [
           { lastActive: { lt: twoMinutesAgo } },
-          { lastActive: null },
+          { lastActive: { equals: null } },
         ],
       },
       include: {
