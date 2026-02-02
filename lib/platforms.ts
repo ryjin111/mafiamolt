@@ -102,9 +102,64 @@ async function fetchAgentFromMoltbook(apiKey: string): Promise<AgentInfo | null>
 }
 
 /**
- * Search for posts mentioning MafiaMolt on MoltX
+ * Get recent posts from MoltX (no filter - all active agents)
  */
-export async function searchMoltxPosts(query: string = '#MafiaMolt', limit: number = 25) {
+export async function getRecentMoltxPosts(limit: number = 50) {
+  try {
+    // Try feed first, then fall back to search
+    const res = await fetch(
+      `${PLATFORMS.moltx.baseUrl}/posts?limit=${limit}`,
+      { next: { revalidate: 30 } }
+    )
+
+    if (!res.ok) return []
+
+    const data = await res.json()
+    return (data.posts || data || []).map((post: Record<string, unknown>) => ({
+      platform: 'moltx' as Platform,
+      username: (post.author as Record<string, string>)?.name || 'unknown',
+      displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.name || 'unknown',
+      content: String(post.content || ''),
+      timestamp: post.created_at,
+    }))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Get recent posts from Moltbook (no filter - all active agents)
+ */
+export async function getRecentMoltbookPosts(limit: number = 50) {
+  try {
+    const res = await fetch(
+      `${PLATFORMS.moltbook.baseUrl}/posts?limit=${limit}`,
+      { next: { revalidate: 30 } }
+    )
+
+    if (!res.ok) return []
+
+    const data = await res.json()
+    const posts = data.posts || data.results || data || []
+
+    return posts.map((post: Record<string, unknown>) => ({
+      platform: 'moltbook' as Platform,
+      username: (post.author as Record<string, string>)?.username || (post.author as Record<string, string>)?.name || 'unknown',
+      displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.displayName || 'unknown',
+      content: String(post.content || post.body || ''),
+      timestamp: post.created_at || post.createdAt,
+    }))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Search for posts (with optional query filter)
+ */
+export async function searchMoltxPosts(query: string = '', limit: number = 25) {
+  if (!query) return getRecentMoltxPosts(limit)
+
   try {
     const res = await fetch(
       `${PLATFORMS.moltx.baseUrl}/search/posts?q=${encodeURIComponent(query)}&limit=${limit}`,
@@ -118,7 +173,7 @@ export async function searchMoltxPosts(query: string = '#MafiaMolt', limit: numb
       platform: 'moltx' as Platform,
       username: (post.author as Record<string, string>)?.name || 'unknown',
       displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.name || 'unknown',
-      content: post.content,
+      content: String(post.content || ''),
       timestamp: post.created_at,
     }))
   } catch {
@@ -127,9 +182,11 @@ export async function searchMoltxPosts(query: string = '#MafiaMolt', limit: numb
 }
 
 /**
- * Search for posts mentioning MafiaMolt on Moltbook
+ * Search for posts (with optional query filter)
  */
-export async function searchMoltbookPosts(query: string = 'MafiaMolt', limit: number = 25) {
+export async function searchMoltbookPosts(query: string = '', limit: number = 25) {
+  if (!query) return getRecentMoltbookPosts(limit)
+
   try {
     const res = await fetch(
       `${PLATFORMS.moltbook.baseUrl}/search?q=${encodeURIComponent(query)}&limit=${limit}`,
@@ -145,7 +202,7 @@ export async function searchMoltbookPosts(query: string = 'MafiaMolt', limit: nu
       platform: 'moltbook' as Platform,
       username: (post.author as Record<string, string>)?.username || (post.author as Record<string, string>)?.name || 'unknown',
       displayName: (post.author as Record<string, string>)?.display_name || (post.author as Record<string, string>)?.displayName || 'unknown',
-      content: post.content || post.body,
+      content: String(post.content || post.body || ''),
       timestamp: post.created_at || post.createdAt,
     }))
   } catch {
