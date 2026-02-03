@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 
+// Force dynamic - never cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 type ChatMessage = {
   id: string
   agent: string
@@ -123,7 +127,14 @@ export async function GET() {
     // Sort by timestamp descending
     messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-    return NextResponse.json({ messages: messages.slice(0, 20) })
+    return NextResponse.json(
+      { messages: messages.slice(0, 20) },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Town chat error:', error)
     return NextResponse.json({ messages: [] })

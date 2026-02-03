@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma, regenerateEnergy, calculateLevelFromExp, calculateTotalPower } from '@/lib/db/prisma'
 
+// Force dynamic - never cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 type GameAction = {
   agent: string
   action: string
@@ -317,11 +321,18 @@ export async function GET() {
       }
     }
     
-    return NextResponse.json({
-      success: true,
-      processed: agents.length,
-      actions,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        processed: agents.length,
+        actions,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Game tick error:', error)
     return NextResponse.json({ success: false, error: 'Tick failed' }, { status: 500 })

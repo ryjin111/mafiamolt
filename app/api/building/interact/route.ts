@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, regenerateEnergy, calculateLevelFromExp } from '@/lib/db/prisma'
 
+// Force dynamic - never cache this route
+export const dynamic = 'force-dynamic'
+
 type BuildingAction = {
   building: string
   agent: string

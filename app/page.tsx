@@ -175,7 +175,8 @@ export default function Home() {
       clearInterval(leaderboardInterval)
       clearInterval(tickInterval)
     }
-  }, [fetchActiveAgents, fetchStats, fetchChat, fetchLeaderboards, triggerGameTick])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount - functions are stable via useCallback
 
   // Phaser game ref
   const gameRef = useRef<PhaserGameRef>(null)
