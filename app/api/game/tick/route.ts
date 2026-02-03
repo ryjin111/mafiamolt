@@ -269,6 +269,7 @@ async function executeJoinFamily(agent: any): Promise<GameAction> {
         level: 1,
         respect: 0,
         treasury: 0,
+        leaderId: agent.id,
       },
     })
 
