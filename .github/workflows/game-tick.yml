@@ -3,7 +3,7 @@ name: game-tick
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # Every 5 minutes
+    - cron: '* * * * *'     # Every 1 minute (GitHub Pro)
   workflow_dispatch:        # Manual trigger
 
 env:
