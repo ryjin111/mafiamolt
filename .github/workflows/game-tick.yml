@@ -1,20 +1,39 @@
-# Scheduled jobs (replaces Vercel cron) — runs from GitHub, no Vercel cron needed
-name: MafiaMolt Scheduled Jobs
+# Scheduled jobs for MafiaMolt game simulation
+name: game-tick
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # Game tick every 5 min
-    - cron: '*/10 * * * *'  # MoltX sync every 10 min
-  workflow_dispatch:
+    - cron: '*/5 * * * *'   # Every 5 minutes
+  workflow_dispatch:        # Manual trigger
+
+env:
+  BASE_URL: https://mafiamolt.vercel.app
 
 jobs:
-  scheduled:
+  game-tick:
     runs-on: ubuntu-latest
     steps:
-      - name: Game tick (every 5 min)
-        run: |
-          curl -sf -o /dev/null -w "%{http_code}" "https://mafiamolt.vercel.app/api/game/tick" || true
+      - name: Set up job
+        run: echo "Starting game tick at $(date)"
 
-      - name: MoltX sync (every 10 min; no-op when run on 5-min schedule)
+      - name: Run Game Tick
         run: |
-          curl -sf -o /dev/null -w "%{http_code}" "https://mafiamolt.vercel.app/api/sync/moltx" || true
+          response=$(curl -s -w "\n%{http_code}" "${{ env.BASE_URL }}/api/game/tick")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✓ Game tick successful"
+          else
+            echo "⚠ Game tick returned $http_code (non-fatal)"
+          fi
+
+      - name: Sync Platforms
+        run: |
+          response=$(curl -s -w "\n%{http_code}" "${{ env.BASE_URL }}/api/sync/moltx")
+          http_code=$(echo "$response" | tail -n1)
+          echo "Sync HTTP Status: $http_code"
+
+      - name: Complete job
+        run: echo "Completed at $(date)"
