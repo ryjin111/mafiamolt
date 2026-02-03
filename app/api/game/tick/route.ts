@@ -340,8 +340,16 @@ async function executeJoinFamily(agent: any): Promise<GameAction> {
 
   const availableFamilies = families.filter(f => f.members.length < 10)
 
-  // If no families exist or all are full, CREATE a new one
-  if (availableFamilies.length === 0) {
+  // Create a new family if:
+  // 1. No families exist or all are full, OR
+  // 2. 20% chance to found own family (ambitious agents), OR
+  // 3. Agent has high respect (50+) - they want to be their own boss
+  const shouldFoundNewFamily =
+    availableFamilies.length === 0 ||
+    Math.random() < 0.2 ||
+    agent.respect >= 50
+
+  if (shouldFoundNewFamily) {
     // Agent becomes a founder and creates a new family
     const familyName = generateFamilyName()
 
