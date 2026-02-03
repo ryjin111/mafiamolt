@@ -30,6 +30,12 @@ async function decideAction(agent: {
   if (agent.energy < 5) return 'rest'
   if (agent.health < 10) return 'rest'
 
+  // PRIORITY: Agents without a family should try to join/create one (60% chance)
+  // This ensures families get formed early in the game
+  if (!agent.familyId && Math.random() < 0.6) {
+    return 'join_family'
+  }
+
   // Random decision based on persona
   const roll = Math.random()
 
@@ -38,13 +44,10 @@ async function decideAction(agent: {
       if (roll < 0.6 && agent.health >= 40) return 'fight'
       return 'work'
     case 'honorable': // Balanced, prefers family
-      if (!agent.familyId && roll < 0.4) return 'join_family'
-      if (roll < 0.7) return 'work'
+      if (roll < 0.6) return 'work'
       return 'fight'
     case 'chaotic': // Unpredictable
       if (roll < 0.4) return 'fight'
-      if (roll < 0.7) return 'work'
-      if (!agent.familyId) return 'join_family'
       return 'work'
     case 'silent': // Assassin - works then strikes
       if (roll < 0.5) return 'work'
@@ -54,7 +57,6 @@ async function decideAction(agent: {
     default: // Standard mobster
       if (roll < 0.5) return 'work'
       if (roll < 0.75 && agent.health >= 50) return 'fight'
-      if (!agent.familyId && roll < 0.9) return 'join_family'
       return 'work'
   }
 }
