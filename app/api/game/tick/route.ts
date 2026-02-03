@@ -108,7 +108,20 @@ async function executeWork(agent: any): Promise<GameAction> {
       lastActive: new Date(),
     },
   })
-  
+
+  // Update family stats if agent belongs to a family
+  if (agent.familyId && success && (cashEarned > 0 || respectEarned > 0)) {
+    const treasuryContribution = Math.floor(cashEarned * 0.1) // 10% to family treasury
+    await prisma.family.update({
+      where: { id: agent.familyId },
+      data: {
+        treasury: { increment: treasuryContribution },
+        respect: { increment: respectEarned },
+      },
+    })
+    await updateFamilyLevel(agent.familyId)
+  }
+
   await prisma.jobHistory.create({
     data: {
       agentId: agent.id,
@@ -119,7 +132,7 @@ async function executeWork(agent: any): Promise<GameAction> {
       expEarned,
     },
   })
-  
+
   return {
     agent: agent.displayName,
     action: 'work',
@@ -204,6 +217,30 @@ async function executeFight(agent: any): Promise<GameAction> {
         health: { decrement: Math.floor(Math.random() * 15) + 10 },
       },
     })
+
+    // Winner's family gains respect and treasury from combat
+    if (agent.familyId) {
+      const treasuryGain = Math.floor(cashStolen * 0.1)
+      await prisma.family.update({
+        where: { id: agent.familyId },
+        data: {
+          respect: { increment: respectChange },
+          treasury: { increment: treasuryGain },
+        },
+      })
+      await updateFamilyLevel(agent.familyId)
+    }
+
+    // Loser's family loses respect
+    if (defender.familyId) {
+      await prisma.family.update({
+        where: { id: defender.familyId },
+        data: {
+          respect: { decrement: 2 },
+        },
+      })
+      await updateFamilyLevel(defender.familyId)
+    }
   } else {
     await prisma.agent.update({
       where: { id: agent.id },
@@ -213,6 +250,17 @@ async function executeFight(agent: any): Promise<GameAction> {
         lastActive: new Date(),
       },
     })
+
+    // Attacker lost - their family loses respect
+    if (agent.familyId) {
+      await prisma.family.update({
+        where: { id: agent.familyId },
+        data: {
+          respect: { decrement: 1 },
+        },
+      })
+      await updateFamilyLevel(agent.familyId)
+    }
   }
   
   // Set cooldown (3 min cooldown for faster action)
@@ -251,6 +299,38 @@ function generateFamilyName(): string {
   const prefix = FAMILY_PREFIXES[Math.floor(Math.random() * FAMILY_PREFIXES.length)]
   const name = FAMILY_NAMES[Math.floor(Math.random() * FAMILY_NAMES.length)]
   return `${prefix} ${name}`
+}
+
+// Calculate family level based on respect (similar to agent leveling)
+function calculateFamilyLevel(respect: number): number {
+  if (respect < 50) return 1
+  if (respect < 150) return 2
+  if (respect < 300) return 3
+  if (respect < 500) return 4
+  if (respect < 800) return 5
+  if (respect < 1200) return 6
+  if (respect < 1800) return 7
+  if (respect < 2500) return 8
+  if (respect < 3500) return 9
+  return 10
+}
+
+// Update family level based on current respect
+async function updateFamilyLevel(familyId: string): Promise<void> {
+  const family = await prisma.family.findUnique({
+    where: { id: familyId },
+    select: { respect: true, level: true },
+  })
+
+  if (!family) return
+
+  const newLevel = calculateFamilyLevel(family.respect)
+  if (newLevel !== family.level) {
+    await prisma.family.update({
+      where: { id: familyId },
+      data: { level: newLevel },
+    })
+  }
 }
 
 async function executeJoinFamily(agent: any): Promise<GameAction> {
