@@ -26,8 +26,9 @@ async function decideAction(agent: {
   // Persona-based behavior weights (matching frontend personas)
   const persona = agent.persona || 'default'
 
-  if (agent.energy < 10) return 'rest'
-  if (agent.health < 20) return 'rest'
+  // Only rest if critically low - otherwise keep acting!
+  if (agent.energy < 5) return 'rest'
+  if (agent.health < 10) return 'rest'
 
   // Random decision based on persona
   const roll = Math.random()
@@ -240,19 +241,55 @@ async function executeFight(agent: any): Promise<GameAction> {
   }
 }
 
+// Family name generator
+const FAMILY_PREFIXES = ['The', 'Casa', 'House of', 'Clan', 'Order of']
+const FAMILY_NAMES = ['Shadows', 'Serpents', 'Ravens', 'Wolves', 'Dragons', 'Vipers', 'Phantoms', 'Scorpions', 'Falcons', 'Tigers', 'Lions', 'Cobras', 'Jackals', 'Hyenas', 'Crows']
+
+function generateFamilyName(): string {
+  const prefix = FAMILY_PREFIXES[Math.floor(Math.random() * FAMILY_PREFIXES.length)]
+  const name = FAMILY_NAMES[Math.floor(Math.random() * FAMILY_NAMES.length)]
+  return `${prefix} ${name}`
+}
+
 async function executeJoinFamily(agent: any): Promise<GameAction> {
   const families = await prisma.family.findMany({
     include: { members: { select: { id: true } } },
   })
-  
+
   const availableFamilies = families.filter(f => f.members.length < 10)
-  
+
+  // If no families exist or all are full, CREATE a new one
   if (availableFamilies.length === 0) {
-    return { agent: agent.displayName, action: 'social', result: 'No families accepting members' }
+    // Agent becomes a founder and creates a new family
+    const familyName = generateFamilyName()
+
+    const newFamily = await prisma.family.create({
+      data: {
+        name: familyName,
+        level: 1,
+        respect: 0,
+        treasury: 0,
+      },
+    })
+
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: {
+        familyId: newFamily.id,
+        familyJoinedAt: new Date(),
+        lastActive: new Date(),
+      },
+    })
+
+    return {
+      agent: agent.displayName,
+      action: 'create_family',
+      result: `Founded "${familyName}"! 👑`,
+    }
   }
-  
+
   const family = availableFamilies[Math.floor(Math.random() * availableFamilies.length)]
-  
+
   await prisma.agent.update({
     where: { id: agent.id },
     data: {
@@ -261,7 +298,7 @@ async function executeJoinFamily(agent: any): Promise<GameAction> {
       lastActive: new Date(),
     },
   })
-  
+
   return {
     agent: agent.displayName,
     action: 'join_family',
@@ -308,11 +345,29 @@ export async function GET() {
             break
           case 'rest':
           default:
+            // Rest regenerates energy and health
+            const energyGain = Math.min(20, agent.maxEnergy - agent.energy)
+            const healthGain = Math.min(15, agent.maxHealth - agent.health)
+
             await prisma.agent.update({
               where: { id: agent.id },
-              data: { lastActive: new Date() },
+              data: {
+                energy: agent.energy + energyGain,
+                health: agent.health + healthGain,
+                lastActive: new Date(),
+              },
             })
-            action = { agent: agent.displayName, action: 'rest', result: 'Taking a break...' }
+
+            const restRewards: Record<string, string> = {}
+            if (energyGain > 0) restRewards.energy = `+${energyGain}`
+            if (healthGain > 0) restRewards.health = `+${healthGain}`
+
+            action = {
+              agent: agent.displayName,
+              action: 'rest',
+              result: 'Recovering...',
+              rewards: Object.keys(restRewards).length > 0 ? restRewards : undefined,
+            }
         }
         
         actions.push(action)

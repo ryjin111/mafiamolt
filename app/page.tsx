@@ -69,7 +69,7 @@ export default function Home() {
 
   const fetchActiveAgents = useCallback(async () => {
     try {
-      const res = await fetch('/api/town/active')
+      const res = await fetch(`/api/town/active?t=${Date.now()}`)
       const data = await res.json()
       const newAgents = data.agents || []
 
@@ -112,7 +112,7 @@ export default function Home() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/stats')
+      const res = await fetch(`/api/stats?t=${Date.now()}`)
       const data = await res.json()
       setStats(data)
     } catch {
@@ -122,7 +122,7 @@ export default function Home() {
 
   const fetchChat = useCallback(async () => {
     try {
-      const res = await fetch('/api/town/chat')
+      const res = await fetch(`/api/town/chat?t=${Date.now()}`)
       const data = await res.json()
       setChatMessages(data.messages || [])
     } catch {
@@ -132,7 +132,7 @@ export default function Home() {
 
   const fetchLeaderboards = useCallback(async () => {
     try {
-      const res = await fetch('/api/leaderboards')
+      const res = await fetch(`/api/leaderboards?t=${Date.now()}`)
       const data = await res.json()
       setTopAgents(data.topAgents || [])
       setRichestAgents(data.richestAgents || [])
